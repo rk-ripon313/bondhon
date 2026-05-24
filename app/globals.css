@@ -1,1 +1,75 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* colors */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --border: #e2e8f0;
+
+  --primary: #dc2626;
+  --secondary: #2563eb;
+
+  --muted: #64748b;
+
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
+
+  --card: #0f172a;
+  --border: #1e293b;
+
+  --primary: #ef4444;
+  --secondary: #3b82f6;
+
+  --muted: #94a3b8;
+
+  --success: #22c55e;
+  --warning: #fbbf24;
+  --danger: #f87171;
+}
+
+@theme {
+  /* colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+
+  --color-muted: var(--muted);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  /* fonts */
+  --font-body: var(--font-inter);
+  --font-heading: var(--font-sora);
+  --font-mono: var(--font-fira);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
