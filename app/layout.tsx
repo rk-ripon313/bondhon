@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import { Fira_Code, Inter, Sora } from "next/font/google";
 import "./globals.css";
@@ -30,9 +31,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${sora.variable} ${fira.variable} h-full antialiased `}
+      data-scroll-behavior="smooth"
+      className={cn(
+        inter.variable,
+        sora.variable,
+        fira.variable,
+        "h-full",
+        "antialiased",
+      )}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col ">{children}</body>
     </html>
   );
 }
