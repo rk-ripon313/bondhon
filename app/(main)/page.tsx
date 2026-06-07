@@ -1,7 +1,19 @@
+import GuestCTA from "@/components/home/GuestCTA";
+import Hero from "@/components/home/Hero";
+import HowItWorks from "@/components/home/HowItWorks";
+import ImpactStats from "@/components/home/ImpactStats";
+import TrustSection from "@/components/home/TrustSection";
+import WhatYouCanDo from "@/components/home/WhatYouCanDo";
+
 export default function Home() {
   return (
-    <div className="w-dvw h-dvh">
-      <h1 className="text-3xl font-extrabold"> initial set up</h1>
-    </div>
+    <>
+      <Hero />
+      <ImpactStats />
+      <WhatYouCanDo />
+      <HowItWorks />
+      <TrustSection />
+      <GuestCTA />
+    </>
   );
 }

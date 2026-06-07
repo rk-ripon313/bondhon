@@ -118,6 +118,7 @@
   /* COLORS */
   --color-app-background: #f8fafc;
   --color-app-foreground: #020617;
+  --color-app-card: #ffffff;
 
   --color-app-primary: #dc2626;
   --color-app-secondary: #2563eb;
@@ -132,6 +133,8 @@
 .dark {
   --color-app-background: #020617;
   --color-app-foreground: #f8fafc;
+
+  --color-app-card: #0f172a;
 
   --color-app-primary: #ef4444;
   --color-app-secondary: #3b82f6;
