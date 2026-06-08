@@ -32,7 +32,7 @@ const userSchema = new Schema(
       },
     },
 
-    isAvailableForDonate: { type: Boolean, default: true },
+    isAvailableForDonate: { type: Boolean, default: false },
     lastDonationDate: { type: Date },
     totalDonations: { type: Number, default: 0 },
     badges: { type: [String], default: [] },
