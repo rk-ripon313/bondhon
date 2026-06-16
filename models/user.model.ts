@@ -49,6 +49,4 @@ userSchema.index({
   "location.coordinates.coordinates": "2dsphere",
 });
 
-const User = models.User || model("User", userSchema);
-
-export default User;
+export const User = models.User || model("User", userSchema);

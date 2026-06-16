@@ -48,6 +48,4 @@ eventSchema.index({
   "location.coordinates.coordinates": "2dsphere",
 });
 
-const Event = models.Event || model("Event", eventSchema);
-
-export default Event;
+export const Event = models.Event || model("Event", eventSchema);

@@ -43,7 +43,5 @@ bloodRequestSchema.index({
   "location.coordinates.coordinates": "2dsphere",
 });
 
-const BloodRequest =
+export const BloodRequest =
   models.BloodRequest || model("BloodRequest", bloodRequestSchema);
-
-export default BloodRequest;
