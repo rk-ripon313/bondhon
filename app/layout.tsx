@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import { Fira_Code, Inter, Sora } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 export const inter = Inter({
@@ -40,7 +41,10 @@ export default function RootLayout({
         "antialiased",
       )}
     >
-      <body className="min-h-screen flex flex-col ">{children}</body>
+      <body className="min-h-screen flex flex-col ">
+        {children}
+        <Toaster richColors position="top-center" />
+      </body>
     </html>
   );
 }
