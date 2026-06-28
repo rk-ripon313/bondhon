@@ -1,7 +1,10 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, Loader2, MapPin, X } from "lucide-react";
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,294 +16,472 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BLOOD_GROUPS, GENDERS } from "@/constants";
 
-// demo suggestions
-const LOCATION_SUGGESTIONS = [
-  "Netrakona",
-  "Mymensingh",
-  "Dhaka",
-  "Sylhet",
-  "Kishoreganj",
-];
+import { BLOOD_GROUPS, GENDERS } from "@/constants";
+import { debounce } from "@/lib/helpers/debounce";
+import { getErrorMessage } from "@/lib/helpers/error";
+import { findMe } from "@/lib/location/find-me";
+import { searchLocations } from "@/lib/location/search-location";
+import {
+  registerSchema,
+  type RegisterFormInput,
+  type RegisterInput,
+} from "@/lib/validations/auth/register.schema";
+
+interface LocationOption {
+  _id: string;
+  area: string;
+  district: string;
+  coordinates: {
+    type: "Point";
+    coordinates: number[];
+  };
+}
+
+const EMPTY_LOCATION = {
+  area: "",
+  district: "",
+  coordinates: {
+    type: "Point" as const,
+    coordinates: [0, 0] as [number, number],
+  },
+};
 
 export default function RegisterForm() {
-  const [form, setForm] = useState({
-    name: "",
-    nickname: "",
-    email: "",
-    phone: "",
-    bloodGroup: "",
-    gender: "",
-    dob: "",
-    password: "",
-    confirmPassword: "",
-    locationInput: "",
-    locationTags: [] as string[],
-    isAvailableForDonate: false,
-    acceptTerms: false,
-  });
-
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
+
+  const [isSearching, setIsSearching] = useState(false);
+  const [isFindingMe, setIsFindingMe] = useState(false);
+  const [isLockedByGps, setIsLockedByGps] = useState(false);
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormInput>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      nickname: "",
+      email: "",
+      phone: "",
+      bloodGroup: undefined,
+      gender: undefined,
+      dob: "",
+      location: EMPTY_LOCATION,
+      password: "",
+      confirmPassword: "",
+      isAvailableForDonate: false,
+      acceptTerms: false,
+    },
+  });
+
+  const currentLocation = watch("location");
+
+  const hasSelectedLocation =
+    !!currentLocation.area && !!currentLocation.district;
+
+  const resetLocation = () => {
+    setValue("location", EMPTY_LOCATION, {
+      shouldValidate: true,
+    });
   };
 
-  const addLocationTag = (value: string) => {
-    const trimmed = value.trim();
-
-    if (!trimmed) return;
-    if (form.locationTags.includes(trimmed)) return;
-    if (form.locationTags.length >= 3) return;
-
-    setForm((prev) => ({
-      ...prev,
-      locationTags: [...prev.locationTags, trimmed],
-      locationInput: "",
-    }));
+  const setFormLocation = (location: LocationOption) => {
+    setValue(
+      "location",
+      {
+        area: location.area,
+        district: location.district,
+        coordinates: {
+          type: "Point",
+          coordinates: location.coordinates.coordinates,
+        },
+      },
+      {
+        shouldValidate: true,
+      },
+    );
   };
 
-  const removeTag = (tag: string) => {
-    setForm((prev) => ({
-      ...prev,
-      locationTags: prev.locationTags.filter((t) => t !== tag),
-    }));
+  const clearLocationSelection = () => {
+    setIsLockedByGps(false);
+    setQuery("");
+    setSuggestions([]);
+
+    resetLocation();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const selectLocation = (location: LocationOption) => {
+    setFormLocation(location);
+    setQuery(`${location.area}, ${location.district}`);
+    setSuggestions([]);
+  };
 
-    if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match");
-      return;
+  // Search fn...
+
+  const debouncedSearch = debounce(async (value: string) => {
+    try {
+      setIsSearching(true);
+      const data = await searchLocations(value);
+      setSuggestions(data);
+    } catch (error) {
+      console.error("Location search failed:", error);
+      setSuggestions([]);
+      toast.error(getErrorMessage(error, "Error searching locations."));
+    } finally {
+      setIsSearching(false);
     }
+  }, 300);
 
-    if (!form.acceptTerms) {
-      alert("Please accept Terms");
-      return;
+  // GPS..
+
+  const handleFindMe = async () => {
+    try {
+      setIsFindingMe(true);
+      const location = await findMe();
+
+      if (!location?.area) {
+        toast.error("No matching operational area found.");
+        return;
+      }
+
+      selectLocation(location);
+      setIsLockedByGps(true);
+      toast.success("Location locked via GPS!");
+    } catch (error) {
+      console.error("GPS Location Error:", error);
+      toast.error(getErrorMessage(error, "Failed to capture GPS coordinates."));
+    } finally {
+      setIsFindingMe(false);
     }
-
-    console.log(form);
   };
 
-  const filteredSuggestions = LOCATION_SUGGESTIONS.filter((item) =>
-    item.toLowerCase().includes(form.locationInput.toLowerCase()),
-  );
+  // Form Submit
+
+  const onSubmit = async (data: RegisterFormInput) => {
+    try {
+      const values = registerSchema.parse(data) as RegisterInput;
+
+      console.log("SUBMIT SUCCESS");
+      console.log(values);
+      throw new Error();
+    } catch (error) {
+      console.error("Register Error:", error);
+      toast.error(getErrorMessage(error));
+    }
+  };
 
   return (
-    <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-      <Input
-        name="name"
-        placeholder="Full Name"
-        value={form.name}
-        onChange={handleChange}
-      />
-      <Input
-        type="email"
-        name="email"
-        placeholder="Email Address"
-        value={form.email}
-        onChange={handleChange}
-      />
+    <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
+      {/* Name */}
+      <div>
+        <Input placeholder="Full Name" {...register("name")} />
+        {errors.name && (
+          <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>
+        )}
+      </div>
 
-      {/* Nick + Phone */}
+      {/* Email */}
+      <div>
+        <Input
+          type="email"
+          placeholder="Email Address"
+          {...register("email")}
+        />
+        {errors.email && (
+          <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+        )}
+      </div>
+
+      {/* Nickname + Phone */}
       <div className="grid gap-3 md:grid-cols-2">
-        <Input
-          name="nickname"
-          placeholder="Nickname"
-          value={form.nickname}
-          onChange={handleChange}
-        />
-        <Input
-          name="phone"
-          placeholder="Phone Number"
-          value={form.phone}
-          onChange={handleChange}
-        />
+        <div>
+          <Input placeholder="Nickname" {...register("nickname")} />
+        </div>
+
+        <div>
+          <Input placeholder="Public Phone Number" {...register("phone")} />
+          {errors.phone && (
+            <p className="mt-1 text-xs text-red-500">{errors.phone.message}</p>
+          )}
+        </div>
       </div>
 
       {/* Blood + Gender + DOB */}
       <div className="grid gap-3 md:grid-cols-3">
-        <Select
-          onValueChange={(value) =>
-            setForm((p) => ({ ...p, bloodGroup: value }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Blood Group" />
-          </SelectTrigger>
-          <SelectContent>
-            {BLOOD_GROUPS.map((g) => (
-              <SelectItem key={g} value={g}>
-                {g}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div>
+          <Controller
+            control={control}
+            name="bloodGroup"
+            render={({ field }) => (
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Blood Group" />
+                </SelectTrigger>
 
-        <Select
-          onValueChange={(value) => setForm((p) => ({ ...p, gender: value }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Gender" />
-          </SelectTrigger>
-          <SelectContent>
-            {GENDERS.map((g) => (
-              <SelectItem key={g} value={g}>
-                {g}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+                <SelectContent>
+                  {BLOOD_GROUPS.map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {group}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
 
-        <Input
-          type="date"
-          name="dob"
-          value={form.dob}
-          onChange={handleChange}
-        />
+          {errors.bloodGroup && (
+            <p className="mt-1 text-xs text-red-500">
+              {errors.bloodGroup.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <Controller
+            control={control}
+            name="gender"
+            render={({ field }) => (
+              <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Gender" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {GENDERS.map((gender) => (
+                    <SelectItem key={gender} value={gender}>
+                      {gender}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+
+          {errors.gender && (
+            <p className="mt-1 text-xs text-red-500">{errors.gender.message}</p>
+          )}
+        </div>
+
+        <div>
+          <Input type="date" {...register("dob")} />
+
+          {errors.dob && (
+            <p className="mt-1 text-xs text-red-500">{errors.dob.message}</p>
+          )}
+        </div>
       </div>
 
-      {/* Location */}
+      {/* Location Intelligent Search Integration Section */}
       <div className="space-y-2 relative">
-        <Input
-          name="locationInput"
-          placeholder="Location (District, Area , Address)"
-          value={form.locationInput}
-          onChange={(e) => {
-            handleChange(e);
-            setShowSuggestions(true);
-          }}
-          onFocus={() => setShowSuggestions(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addLocationTag(form.locationInput);
-            }
-          }}
-        />
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1">
+            <Input
+              value={query}
+              disabled={isLockedByGps}
+              placeholder={
+                isLockedByGps
+                  ? "Location locked by GPS"
+                  : "Search your area or district..."
+              }
+              onChange={(e) => {
+                const value = e.target.value;
 
-        {/* Suggestions */}
-        {showSuggestions && form.locationInput && (
-          <div className="absolute z-10 w-full rounded-md border bg-card shadow-md">
-            {filteredSuggestions.length > 0 ? (
-              filteredSuggestions.map((item) => (
-                <div
-                  key={item}
-                  onClick={() => {
-                    addLocationTag(item);
-                    setShowSuggestions(false);
-                  }}
-                  className="px-3 py-2 text-sm hover:bg-muted cursor-pointer"
-                >
-                  {item}
-                </div>
-              ))
-            ) : (
-              <div className="px-3 py-2 text-sm text-muted-foreground">
-                No match found
-              </div>
+                setQuery(value);
+
+                if (hasSelectedLocation) {
+                  resetLocation();
+                }
+
+                if (!value.trim()) {
+                  setSuggestions([]);
+                  return;
+                }
+
+                debouncedSearch(value);
+              }}
+              onFocus={() => {
+                if (hasSelectedLocation) {
+                  resetLocation();
+                  debouncedSearch(query);
+                }
+              }}
+              className="pr-10"
+            />
+            {isSearching && !isLockedByGps && (
+              <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+            {isLockedByGps && (
+              <button
+                type="button"
+                onClick={clearLocationSelection}
+                className="absolute right-3 top-3 text-gray-400 hover:text-red-500"
+              >
+                <X size={16} />
+              </button>
             )}
           </div>
-        )}
 
-        {/* Selected Locations  */}
-        {form.locationTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {form.locationTags.map((tag) => (
-              <div
-                key={tag}
-                className="flex items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs"
-              >
-                <span>{tag}</span>
+          {!isLockedByGps && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleFindMe}
+              disabled={isFindingMe}
+              className="flex items-center gap-1 shrink-0"
+            >
+              <MapPin className="h-4 w-4 text-rose-500" />
+              Find Me
+            </Button>
+          )}
+        </div>
 
-                <button
-                  type="button"
-                  onClick={() => removeTag(tag)}
-                  className="text-muted-foreground hover:text-red-500"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+        {/* Dropdown Box Suggestions Container Layout Stack */}
+        {!isLockedByGps &&
+          query.trim() &&
+          !isSearching &&
+          !hasSelectedLocation && (
+            <div className="absolute left-0 top-full z-50 mt-1 max-h-60 overflow-y-auto w-full rounded-md border bg-background shadow-lg divide-y divide-muted">
+              {suggestions.length > 0 ? (
+                suggestions.map((item) => (
+                  <button
+                    key={item._id}
+                    type="button"
+                    onClick={() => selectLocation(item)}
+                    className="block w-full px-4 py-2.5 text-left text-sm hover:bg-muted font-medium text-foreground transition-colors"
+                  >
+                    <span className="block text-sm text-gray-800">
+                      {item.area}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {item.district} District
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                  No locations found for {`"${query}"`}
+                </div>
+              )}
+            </div>
+          )}
+
+        {errors.location && (
+          <p className="text-xs text-red-500 mt-1">
+            Please select a valid area suggestion
+          </p>
         )}
       </div>
-
       {/* Password */}
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="relative">
-          <Input
-            type={showPass ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPass((p) => !p)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          >
-            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        </div>
+        <div className="">
+          <div className="relative">
+            <Input
+              type={showPass ? "text" : "password"}
+              placeholder="Password"
+              {...register("password")}
+            />
 
-        <div className="relative">
-          <Input
-            type={showConfirmPass ? "text" : "password"}
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPass((p) => !p)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          >
-            {showConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowPass((p) => !p)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="mt-1 text-xs text-red-500">
+              {errors.password.message}
+            </p>
+          )}
+        </div>
+        <div className="">
+          <div className="relative">
+            <Input
+              type={showConfirmPass ? "text" : "password"}
+              placeholder="Confirm Password"
+              {...register("confirmPassword")}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowConfirmPass((p) => !p)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              {showConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {errors.confirmPassword && (
+            <p className="mt-1 text-xs text-red-500">
+              {errors.confirmPassword.message}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Checkboxes */}
+      {/* isAvailableForDonate */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="available"
-            checked={form.isAvailableForDonate}
-            onCheckedChange={(checked) =>
-              setForm((p) => ({ ...p, isAvailableForDonate: !!checked }))
-            }
-          />
-          <label className="text-sm text-muted-foreground">
-            Available for blood donation
-          </label>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="terms"
-            checked={form.acceptTerms}
-            onCheckedChange={(checked) =>
-              setForm((p) => ({ ...p, acceptTerms: !!checked }))
-            }
-          />
-          <label className="text-sm text-muted-foreground">
-            I agree to Terms & Privacy Policy
-          </label>
-        </div>
+        <Controller
+          control={control}
+          name="isAvailableForDonate"
+          render={({ field }) => (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={field.value ?? false}
+                onCheckedChange={(checked) => field.onChange(!!checked)}
+              />
+              <label className="text-sm text-muted-foreground">
+                I am available for donation
+              </label>
+            </div>
+          )}
+        />
+        {errors.isAvailableForDonate && (
+          <p className="mt-1 text-xs text-red-500">
+            {errors.isAvailableForDonate.message}
+          </p>
+        )}
       </div>
 
-      <Button className="w-full bg-app-primary hover:bg-app-primary/90 py-2 rounded-md cursor-pointer">
-        Create Account
+      {/* Terms */}
+      <div className="space-y-3">
+        <Controller
+          control={control}
+          name="acceptTerms"
+          render={({ field }) => (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={field.value ?? false}
+                onCheckedChange={(checked) => field.onChange(!!checked)}
+              />
+
+              <label className="text-sm text-muted-foreground">
+                I agree to Terms & Privacy Policy
+              </label>
+            </div>
+          )}
+        />
+
+        {errors.acceptTerms && (
+          <p className="text-xs text-red-500">{errors.acceptTerms.message}</p>
+        )}
+      </div>
+
+      <Button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full bg-app-primary hover:bg-app-primary/90 py-2 rounded-md cursor-pointe"
+      >
+        {isSubmitting ? "Creating Account..." : "Create Account"}
       </Button>
     </form>
   );

@@ -1,24 +1,7 @@
 import { BLOOD_GROUPS, GENDERS } from "@/constants";
 import { calculateAge } from "@/lib/helpers/date";
 import { z } from "zod";
-
-const locationSchema = z.object({
-  area: z.string().trim().min(1, "Area/Upazila/Thana is required"),
-  district: z.string().trim().min(1, "District is required"),
-  coordinates: z.object({
-    type: z.literal("Point").default("Point"),
-    coordinates: z
-      .array(z.number())
-      .length(2, "Coordinates must contain exactly longitude and latitude")
-      // Frontend handling safety verification checks
-      .refine((coords) => coords[0] >= -180 && coords[0] <= 180, {
-        message: "Invalid longitude value",
-      })
-      .refine((coords) => coords[1] >= -90 && coords[1] <= 90, {
-        message: "Invalid latitude value",
-      }),
-  }),
-});
+import { locationSchema } from "../shared/location.schema";
 
 export const registerSchema = z
   .object({
@@ -28,7 +11,11 @@ export const registerSchema = z
       .min(3, "Full name must be at least 3 characters")
       .max(50, "Full name cannot exceed 50 characters"),
 
-    nickname: z.string().trim().max(30, "Nickname is too long").optional(),
+    nickname: z
+      .string()
+      .max(30, "Nickname is too long")
+      .optional()
+      .transform((val) => (val?.trim() === "" ? undefined : val)),
 
     email: z
       .string()
@@ -96,5 +83,7 @@ export const registerSchema = z
       message: "Must be 18+ to donate blood",
     },
   );
+
+export type RegisterFormInput = z.input<typeof registerSchema>;
 
 export type RegisterInput = z.infer<typeof registerSchema>;
