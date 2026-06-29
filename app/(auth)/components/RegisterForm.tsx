@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { registerUser } from "@/app/actions/auth/register.action";
 import { BLOOD_GROUPS, GENDERS } from "@/constants";
 import { debounce } from "@/lib/helpers/debounce";
 import { getErrorMessage } from "@/lib/helpers/error";
@@ -25,18 +26,9 @@ import { searchLocations } from "@/lib/location/search-location";
 import {
   registerSchema,
   type RegisterFormInput,
-  type RegisterInput,
 } from "@/lib/validations/auth/register.schema";
-
-interface LocationOption {
-  _id: string;
-  area: string;
-  district: string;
-  coordinates: {
-    type: "Point";
-    coordinates: number[];
-  };
-}
+import { LocationOption } from "@/types/location.type";
+import { useRouter } from "next/navigation";
 
 const EMPTY_LOCATION = {
   area: "",
@@ -48,6 +40,7 @@ const EMPTY_LOCATION = {
 };
 
 export default function RegisterForm() {
+  const router = useRouter();
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
 
@@ -168,13 +161,19 @@ export default function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormInput) => {
     try {
-      const values = registerSchema.parse(data) as RegisterInput;
+      const result = await registerUser(data);
 
-      console.log("SUBMIT SUCCESS");
-      console.log(values);
-      throw new Error();
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+
+      router.push("/login");
     } catch (error) {
       console.error("Register Error:", error);
+
       toast.error(getErrorMessage(error));
     }
   };
@@ -272,7 +271,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <Input type="date" {...register("dob")} />
+          <Input type="date" placeholder="Date of Birth" {...register("dob")} />
 
           {errors.dob && (
             <p className="mt-1 text-xs text-red-500">{errors.dob.message}</p>

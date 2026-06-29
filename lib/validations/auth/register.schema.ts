@@ -26,7 +26,12 @@ export const registerSchema = z
     phone: z
       .string()
       .trim()
-      .regex(/^(?:\+8801|8801|01)[3-9]\d{8}$/, "Enter a valid BD phone number"),
+      .regex(/^(?:\+8801|8801|01)[3-9]\d{8}$/, "Enter a valid BD phone number")
+      .transform((phone) => {
+        if (phone.startsWith("+880")) return "0" + phone.slice(4);
+        if (phone.startsWith("880")) return "0" + phone.slice(3);
+        return phone;
+      }),
 
     bloodGroup: z.enum(BLOOD_GROUPS, {
       message: "Blood group is required",
@@ -85,5 +90,3 @@ export const registerSchema = z
   );
 
 export type RegisterFormInput = z.input<typeof registerSchema>;
-
-export type RegisterInput = z.infer<typeof registerSchema>;
