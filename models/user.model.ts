@@ -8,7 +8,8 @@ const userSchema = new Schema(
     nickname: { type: String, trim: true },
 
     email: { type: String, required: true, unique: true, lowercase: true },
-    phone: { type: String },
+    phone: { type: String, trim: true },
+    password: { type: String, required: true, select: false },
 
     avatar: { type: String, default: "/avatars/default.png" },
 
