@@ -1,11 +1,23 @@
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+
+import client from "./lib/db";
 import { dbConnect } from "./lib/db/db-connect";
 import { User } from "./models/user.model";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter: MongoDBAdapter(client),
+
+  session: {
+    strategy: "jwt",
+  },
+
   providers: [
+    Google,
+
     Credentials({
       authorize: async (credentials) => {
         const { email, password } = credentials;
