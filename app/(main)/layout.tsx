@@ -1,17 +1,19 @@
+import { auth } from "@/auth";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/navbar/Navbar";
+import { SessionUser } from "@/types/user.type";
 
 import React from "react";
 
-export default function MainLayout({
+export default async function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = {
-    name: "Ripon",
-    image: "https://i.pravatar.cc/100",
-  };
+  const session = await auth();
+  // console.log(session);
+
+  const user: SessionUser | null = session?.user ?? null;
   return (
     <>
       <Navbar user={user} />

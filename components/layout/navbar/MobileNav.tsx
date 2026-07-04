@@ -17,6 +17,7 @@ import { Menu } from "lucide-react";
 
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
+import { SessionUser } from "@/types/user.type";
 import { useState } from "react";
 import NavLogo from "./NavLogo";
 import WeatherButton from "./WeatherButton";
@@ -26,10 +27,7 @@ interface MobileNavProps {
     label: string;
     href: string;
   }[];
-  user: {
-    name: string;
-    image: string;
-  } | null;
+  user: SessionUser | null;
 }
 
 export default function MobileNav({ navLinks, user }: MobileNavProps) {

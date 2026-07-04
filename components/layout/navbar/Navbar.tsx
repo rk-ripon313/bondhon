@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { SessionUser } from "@/types/user.type";
 import { LogIn, UserPlus } from "lucide-react";
 import Link from "next/link";
 import DesktopNav from "./DesktopNav";
@@ -19,14 +20,11 @@ const navLinks = [
   { label: "Donors", href: "/donors" },
 ];
 
-interface UserProps {
-  user: {
-    name: string;
-    image: string;
-  } | null;
+interface NavbarProps {
+  user: SessionUser | null;
 }
 
-export default function Navbar({ user }: UserProps) {
+export default function Navbar({ user }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
