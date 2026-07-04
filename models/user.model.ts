@@ -11,7 +11,7 @@ const userSchema = new Schema(
     phone: { type: String, trim: true },
     password: { type: String, required: true, select: false },
 
-    avatar: { type: String, default: "/avatars/default.png" },
+    image: { type: String, default: "/avatars/default.png" },
 
     bloodGroup: { type: String, enum: BLOOD_GROUPS, required: true },
     dateOfBirth: { type: Date },
