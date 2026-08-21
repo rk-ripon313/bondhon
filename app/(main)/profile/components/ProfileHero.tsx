@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import {
   calculateProfileCompletion,
-  isProfileComplete,
+  isUserEligibleForAction,
 } from "@/lib/profile/profile-utils";
 import { UserProfile } from "@/types/user.type";
 import {
@@ -18,12 +18,12 @@ import Image from "next/image";
 import { useState } from "react";
 
 export default function ProfileHero({ user }: { user: UserProfile }) {
+  const completionPercentage = calculateProfileCompletion(user);
+  const isEligibleForAction = isUserEligibleForAction(user);
+
   const [isAvailable, setIsAvailable] = useState(
     user?.isAvailableForDonate ?? true,
   );
-
-  const completionPercentage = calculateProfileCompletion(user);
-  const isComplete = isProfileComplete(user);
 
   const handleToggleAvailability = async (checked: boolean) => {
     setIsAvailable(checked);
@@ -158,7 +158,7 @@ export default function ProfileHero({ user }: { user: UserProfile }) {
       <div className="relative mt-6 border-t border-border pt-5">
         <div className="mb-2 flex items-center justify-between gap-3 text-xs">
           <span className="flex items-center gap-1.5 text-app-muted">
-            {isComplete ? (
+            {isEligibleForAction ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
             ) : (
               <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
@@ -168,7 +168,7 @@ export default function ProfileHero({ user }: { user: UserProfile }) {
 
           <span
             className={`font-bold ${
-              isComplete ? "text-emerald-500" : "text-amber-500"
+              isEligibleForAction ? "text-emerald-500" : "text-amber-500"
             }`}
           >
             {completionPercentage}%
@@ -180,10 +180,23 @@ export default function ProfileHero({ user }: { user: UserProfile }) {
           className="h-2 bg-app-background"
         />
 
-        {!isComplete && (
+        {/* Profile status */}
+        {!isEligibleForAction ? (
+          <div className="mt-3 flex items-center gap-2 text-[11px] text-app-muted">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+            Complete your required information to participate in BondhOn
+            activities.
+          </div>
+        ) : completionPercentage < 100 ? (
           <div className="mt-3 flex items-center gap-2 text-[11px] text-app-muted">
             <ShieldCheck className="h-3.5 w-3.5 text-app-secondary" />
-            Complete your profile to get the most out of BondhOn.
+            Your profile is ready for BondhOn. Complete the remaining
+            information to finish your profile.
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-500">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Your profile is complete and ready for BondhOn.
           </div>
         )}
       </div>
