@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import LocationCard from "./components/LocationCard";
 import MedicalProfileCard from "./components/MedicalProfileCard";
 import PersonalInfoCard from "./components/PersonalInfoCard";
-import ProfileHero from "./components/ProfileHero";
+import ProfileHero from "./components/profile-hero/ProfileHero";
 import UserActivityTabs from "./components/UserActivityTabs";
 
 export default async function ProfilePage() {
@@ -12,7 +12,7 @@ export default async function ProfilePage() {
   if (!user) {
     redirect("/");
   }
-  console.log(user);
+  // console.log(user);
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
