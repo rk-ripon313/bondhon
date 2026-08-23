@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
+import { SessionProvider } from "next-auth/react";
 import { Fira_Code, Inter, Sora } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -42,8 +43,10 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-screen flex flex-col ">
-        {children}
-        <Toaster richColors position="top-center" />
+        <SessionProvider>
+          {children}
+          <Toaster richColors position="top-center" />
+        </SessionProvider>
       </body>
     </html>
   );
