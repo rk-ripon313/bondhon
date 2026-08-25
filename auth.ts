@@ -4,6 +4,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
+import { authConfig } from "./auth.config";
 import client from "./lib/db";
 import { dbConnect } from "./lib/db/db-connect";
 import { User } from "./models/user.model";
@@ -14,6 +15,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: "jwt",
   },
+
+  ...authConfig,
 
   providers: [
     Google,
@@ -35,4 +38,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
+
+  callbacks: {
+    async jwt({ token, user, trigger, session }) {
+      if (user) {
+        token.name = user.name;
+        token.email = user.email;
+        token.image = user.image;
+      }
+
+      if (trigger === "update" && session) {
+        token.name = session.name ?? token.name;
+        token.image = session.image ?? token.image;
+      }
+
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.name = token.name ?? session.user.name;
+        session.user.email = token.email ?? session.user.email;
+        session.user.image =
+          typeof token.image === "string" ? token.image : session.user.image;
+      }
+
+      return session;
+    },
+  },
 });

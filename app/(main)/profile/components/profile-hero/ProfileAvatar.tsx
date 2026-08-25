@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 interface ProfileAvatarProps {
@@ -95,6 +96,7 @@ export default function ProfileAvatar({
   isAvailableForDonate = false,
 }: ProfileAvatarProps) {
   const { update } = useSession();
+  const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -258,6 +260,7 @@ export default function ProfileAvatar({
 
       //  Close dialog
       handleUploadOpenChange(false);
+      router.refresh();
     } catch (error) {
       console.error("Failed to save profile image:", error);
       const message = getErrorMessage(error);
