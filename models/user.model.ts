@@ -7,13 +7,14 @@ const userSchema = new Schema(
     name: { type: String, required: true, trim: true },
     nickname: { type: String, trim: true },
 
+    username: { type: String, unique: true, trim: true, lowercase: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     phone: { type: String, trim: true },
-    password: { type: String, required: true, select: false },
+    password: { type: String, select: false },
 
     image: { type: String, default: "/avatars/default.png" },
 
-    bloodGroup: { type: String, enum: BLOOD_GROUPS, required: true },
+    bloodGroup: { type: String, enum: BLOOD_GROUPS },
     dateOfBirth: { type: Date },
     gender: { type: String, enum: GENDERS },
     height: { type: Number },
@@ -40,6 +41,7 @@ const userSchema = new Schema(
 
     followers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   {
     timestamps: true,

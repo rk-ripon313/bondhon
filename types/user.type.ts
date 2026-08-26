@@ -9,6 +9,7 @@ export interface UserProfile {
   name: string;
   nickname?: string;
 
+  username: string;
   email: string;
   phone?: string;
 
