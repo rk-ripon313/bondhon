@@ -38,3 +38,9 @@ export interface UserProfile {
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
+
+export interface UserConnection {
+  username: string;
+  name: string;
+  image?: string;
+}
