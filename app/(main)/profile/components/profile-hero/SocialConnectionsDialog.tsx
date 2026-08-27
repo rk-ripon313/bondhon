@@ -81,14 +81,14 @@ export default function SocialConnectionsDialog({
             <TabsList className="grid  h-10  w-full  grid-cols-2  rounded-xl  bg-app-background  p-1 ">
               <TabsTrigger
                 value="followers"
-                className=" rounded-lg text-xs font-mediu  text-app-muted transition-all data-[state=active]:bg-app-card  data-[state=active]:text-app-foreground  data-[state=active]:shadow-sm  "
+                className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
               >
                 Followers
               </TabsTrigger>
 
               <TabsTrigger
                 value="following"
-                className=" rounded-lg text-xs font-mediu  text-app-muted transition-all data-[state=active]:bg-app-card  data-[state=active]:text-app-foreground  data-[state=active]:shadow-sm  "
+                className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
               >
                 Following
               </TabsTrigger>
@@ -111,6 +111,11 @@ export default function SocialConnectionsDialog({
                     key={user.username}
                     user={user}
                     type="followers"
+                    onRemove={(username) => {
+                      setFollowers((prev) =>
+                        prev.filter((user) => user.username !== username),
+                      );
+                    }}
                   />
                 ))
               ) : (
@@ -144,6 +149,11 @@ export default function SocialConnectionsDialog({
                     key={user.username}
                     user={user}
                     type="following"
+                    onRemove={(username) => {
+                      setFollowing((prev) =>
+                        prev.filter((user) => user.username !== username),
+                      );
+                    }}
                   />
                 ))
               ) : (
