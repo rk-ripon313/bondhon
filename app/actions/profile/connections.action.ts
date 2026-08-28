@@ -39,16 +39,13 @@ export async function loadUserConnections() {
 }
 
 /**
- * Toggles the follow status of a user
- * @param username a string representing the username of the user to follow or unfollow
- * @returns an object containing the success status, a message, and the new follow status (true for following, false for not following)
+ * Toggles the follow status of a user.
  */
-
 export async function toggleFollow(username: string) {
   try {
     const currentUser = await getCurrentUser();
 
-    if (!currentUser?._id) {
+    if (!currentUser?.id) {
       return { success: false, message: "Unauthorized." };
     }
 
@@ -64,42 +61,53 @@ export async function toggleFollow(username: string) {
       return { success: false, message: "User not found." };
     }
 
-    const currentUserId = currentUser._id;
+    const currentUserId = currentUser.id;
     const targetUserId = targetUser._id;
 
-    if (currentUserId.equals(targetUserId)) {
-      return { success: false, message: "You cannot follow yourself." };
+    if (currentUserId === targetUserId.toString()) {
+      return {
+        success: false,
+        message: "You cannot follow yourself.",
+      };
     }
 
     const [isBlockedByTarget, hasBlockedTarget, isFollowing] =
       await Promise.all([
         User.exists({
-          _id: targetUser._id,
-          blockedUsers: currentUser._id,
+          _id: targetUserId,
+          blockedUsers: currentUserId,
         }),
 
         User.exists({
-          _id: currentUser._id,
-          blockedUsers: targetUser._id,
+          _id: currentUserId,
+          blockedUsers: targetUserId,
         }),
 
         User.exists({
-          _id: currentUser._id,
-          following: targetUser._id,
+          _id: currentUserId,
+          following: targetUserId,
         }),
       ]);
 
     if (isBlockedByTarget || hasBlockedTarget) {
-      return { success: false, message: "You cannot follow this user." };
+      return {
+        success: false,
+        message: "You cannot follow this user.",
+      };
     }
 
     if (isFollowing) {
       await Promise.all([
         User.findByIdAndUpdate(currentUserId, {
-          $pull: { following: targetUserId },
+          $pull: {
+            following: targetUserId,
+          },
         }),
+
         User.findByIdAndUpdate(targetUserId, {
-          $pull: { followers: currentUserId },
+          $pull: {
+            followers: currentUserId,
+          },
         }),
       ]);
 
@@ -114,10 +122,15 @@ export async function toggleFollow(username: string) {
 
     await Promise.all([
       User.findByIdAndUpdate(currentUserId, {
-        $addToSet: { following: targetUserId },
+        $addToSet: {
+          following: targetUserId,
+        },
       }),
+
       User.findByIdAndUpdate(targetUserId, {
-        $addToSet: { followers: currentUserId },
+        $addToSet: {
+          followers: currentUserId,
+        },
       }),
     ]);
 
@@ -140,22 +153,26 @@ export async function toggleFollow(username: string) {
     };
   }
 }
-/**
- * Toggles the block status of a user
- * @param username a string representing the username of the user to block or unblock
- * @returns an object containing the success status, a message, and the new block status (true for blocked, false for unblocked)
- */
 
+/**
+ * Toggles the block status of a user.
+ */
 export async function toggleBlock(username: string) {
   try {
     const currentUser = await getCurrentUser();
 
-    if (!currentUser?._id) {
-      return { success: false, message: "Unauthorized." };
+    if (!currentUser?.id) {
+      return {
+        success: false,
+        message: "Unauthorized.",
+      };
     }
 
     if (!username) {
-      return { success: false, message: "Username is required." };
+      return {
+        success: false,
+        message: "Username is required.",
+      };
     }
 
     await dbConnect();
@@ -163,14 +180,20 @@ export async function toggleBlock(username: string) {
     const targetUser = await User.findOne({ username }).select("_id");
 
     if (!targetUser) {
-      return { success: false, message: "User not found." };
+      return {
+        success: false,
+        message: "User not found.",
+      };
     }
 
-    const currentUserId = currentUser._id;
+    const currentUserId = currentUser.id;
     const targetUserId = targetUser._id;
 
-    if (currentUserId.equals(targetUserId)) {
-      return { success: false, message: "You cannot block yourself." };
+    if (currentUserId === targetUserId.toString()) {
+      return {
+        success: false,
+        message: "You cannot block yourself.",
+      };
     }
 
     const isBlocked = await User.exists({
@@ -195,7 +218,6 @@ export async function toggleBlock(username: string) {
     }
 
     await Promise.all([
-      // Add target user to current user's blocked list
       User.findByIdAndUpdate(currentUserId, {
         $addToSet: {
           blockedUsers: targetUserId,
@@ -206,7 +228,6 @@ export async function toggleBlock(username: string) {
         },
       }),
 
-      // Remove current user from target user's relationships
       User.findByIdAndUpdate(targetUserId, {
         $pull: {
           following: currentUserId,

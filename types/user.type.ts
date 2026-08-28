@@ -5,7 +5,8 @@ export interface SessionUser {
 }
 
 export interface UserProfile {
-  _id: string;
+  id: string;
+
   name: string;
   nickname?: string;
 

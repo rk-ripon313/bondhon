@@ -1,155 +1,258 @@
 "use server";
 
+import {
+  getCurrentUser,
+  getCurrentUserConnections,
+} from "@/database/queries/user.query";
+import { dbConnect } from "@/lib/db/db-connect";
+import { User } from "@/models/user.model";
 import { revalidatePath } from "next/cache";
 
-import { getCurrentUser } from "@/database/queries/user.query";
-import { dbConnect } from "@/lib/db/db-connect";
-import { calculateAge } from "@/lib/helpers/date";
-import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
-import { User } from "@/models/user.model";
-import { UserProfile } from "@/types/user.type";
-
-type UpdateUserData = Partial<
-  Pick<
-    UserProfile,
-    | "name"
-    | "nickname"
-    | "phone"
-    | "image"
-    | "bloodGroup"
-    | "gender"
-    | "dateOfBirth"
-    | "height"
-    | "weight"
-  >
->;
-
-/**
- * Updates the specified fields of the current user's profile in the database.
- * @param updates - An object containing the fields to update and their new values.
- * @returns An object containing the success status and a message.
- */
-export async function updateUserField(updates: UpdateUserData) {
+export async function loadUserConnections() {
   try {
-    const user = await getCurrentUser();
+    const connections = await getCurrentUserConnections();
 
-    if (!user?._id || !user?.email) {
-      return { success: false, message: "Unauthorized." };
+    if (!connections) {
+      return {
+        success: false,
+        message: "Unauthorized.",
+        followers: [],
+        following: [],
+      };
     }
-
-    if (Object.keys(updates).length === 0) {
-      return { success: false, message: "No data provided." };
-    }
-
-    await dbConnect();
-
-    const updatedUser = await User.findOneAndUpdate(
-      { email: user.email },
-      { $set: updates },
-      {
-        new: true,
-        runValidators: true,
-      },
-    ).lean();
-
-    if (!updatedUser) {
-      return { success: false, message: "User not found." };
-    }
-
-    revalidatePath("/profile");
 
     return {
       success: true,
-      message: "Profile updated successfully.",
+      followers: connections.followers,
+      following: connections.following,
     };
   } catch (error) {
-    console.error("Update user field error:", error);
+    console.error("Load user connections error:", error);
 
     return {
       success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to update profile.",
+      message: "Failed to load connections.",
+      followers: [],
+      following: [],
     };
   }
 }
 
 /**
- * Updates the donor availability status of the current user in the database.
- * @param isAvailableForDonate - A boolean indicating whether the user is available for donation.
- * @returns An object containing the success status and a message.
+ * Toggles the follow status of a user.
  */
-
-export async function updateDonorAvailability(isAvailableForDonate: boolean) {
+export async function toggleFollow(username: string) {
   try {
-    const user = await getCurrentUser();
+    const currentUser = await getCurrentUser();
 
-    if (!user?._id || !user.email) {
+    if (!currentUser?.id) {
       return { success: false, message: "Unauthorized." };
     }
 
-    if (isAvailableForDonate) {
-      if (!isUserEligibleForAction(user)) {
-        return {
-          success: false,
-          message:
-            "Complete your required profile information before becoming available for donation.",
-        };
-      }
-
-      const isAdult = user.dateOfBirth
-        ? calculateAge(user.dateOfBirth) >= 18
-        : false;
-
-      if (!isAdult) {
-        return {
-          success: false,
-          message: "You must be at least 18 years old to donate blood.",
-        };
-      }
-
-      const hasRecentDonation = user.lastDonationDate
-        ? Date.now() - new Date(user.lastDonationDate).getTime() <
-          90 * 24 * 60 * 60 * 1000
-        : false;
-
-      if (hasRecentDonation) {
-        return {
-          success: false,
-          message:
-            "You cannot become available yet because your last donation was too recent.",
-        };
-      }
+    if (!username) {
+      return { success: false, message: "Username is required." };
     }
 
     await dbConnect();
 
-    const updatedUser = await User.findOneAndUpdate(
-      { email: user.email },
-      { $set: { isAvailableForDonate } },
-      { new: true },
-    ).lean();
+    const targetUser = await User.findOne({ username }).select("_id");
 
-    if (!updatedUser) {
-      return { success: false, message: "Not updated " };
+    if (!targetUser) {
+      return { success: false, message: "User not found." };
     }
+
+    const currentUserId = currentUser.id;
+    const targetUserId = targetUser._id;
+
+    if (currentUserId === targetUserId.toString()) {
+      return {
+        success: false,
+        message: "You cannot follow yourself.",
+      };
+    }
+
+    const [isBlockedByTarget, hasBlockedTarget, isFollowing] =
+      await Promise.all([
+        User.exists({
+          _id: targetUserId,
+          blockedUsers: currentUserId,
+        }),
+
+        User.exists({
+          _id: currentUserId,
+          blockedUsers: targetUserId,
+        }),
+
+        User.exists({
+          _id: currentUserId,
+          following: targetUserId,
+        }),
+      ]);
+
+    if (isBlockedByTarget || hasBlockedTarget) {
+      return {
+        success: false,
+        message: "You cannot follow this user.",
+      };
+    }
+
+    if (isFollowing) {
+      await Promise.all([
+        User.findByIdAndUpdate(currentUserId, {
+          $pull: {
+            following: targetUserId,
+          },
+        }),
+
+        User.findByIdAndUpdate(targetUserId, {
+          $pull: {
+            followers: currentUserId,
+          },
+        }),
+      ]);
+
+      revalidatePath("/profile");
+
+      return {
+        success: true,
+        data: false,
+        message: "Unfollowed successfully.",
+      };
+    }
+
+    await Promise.all([
+      User.findByIdAndUpdate(currentUserId, {
+        $addToSet: {
+          following: targetUserId,
+        },
+      }),
+
+      User.findByIdAndUpdate(targetUserId, {
+        $addToSet: {
+          followers: currentUserId,
+        },
+      }),
+    ]);
 
     revalidatePath("/profile");
 
     return {
       success: true,
-      message: isAvailableForDonate
-        ? "You are now available for donation."
-        : "Donor availability turned off.",
+      data: true,
+      message: "Started following!",
     };
   } catch (error) {
-    console.error("Update donor availability error:", error);
+    console.error("Toggle follow error:", error);
 
     return {
       success: false,
       message:
         error instanceof Error
           ? error.message
-          : "Failed to update donor availability.",
+          : "Failed to update follow status.",
+    };
+  }
+}
+
+/**
+ * Toggles the block status of a user.
+ */
+
+export async function toggleBlock(username: string) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser?.id) {
+      return {
+        success: false,
+        message: "Unauthorized.",
+      };
+    }
+
+    if (!username) {
+      return {
+        success: false,
+        message: "Username is required.",
+      };
+    }
+
+    await dbConnect();
+
+    const targetUser = await User.findOne({ username }).select("_id");
+
+    if (!targetUser) {
+      return {
+        success: false,
+        message: "User not found.",
+      };
+    }
+
+    const currentUserId = currentUser.id;
+    const targetUserId = targetUser._id;
+
+    if (currentUserId === targetUserId.toString()) {
+      return {
+        success: false,
+        message: "You cannot block yourself.",
+      };
+    }
+
+    const isBlocked = await User.exists({
+      _id: currentUserId,
+      blockedUsers: targetUserId,
+    });
+
+    if (isBlocked) {
+      await User.findByIdAndUpdate(currentUserId, {
+        $pull: {
+          blockedUsers: targetUserId,
+        },
+      });
+
+      revalidatePath("/profile");
+
+      return {
+        success: true,
+        data: false,
+        message: "User unblocked successfully.",
+      };
+    }
+
+    await Promise.all([
+      User.findByIdAndUpdate(currentUserId, {
+        $addToSet: {
+          blockedUsers: targetUserId,
+        },
+        $pull: {
+          following: targetUserId,
+          followers: targetUserId,
+        },
+      }),
+
+      User.findByIdAndUpdate(targetUserId, {
+        $pull: {
+          following: currentUserId,
+          followers: currentUserId,
+        },
+      }),
+    ]);
+
+    revalidatePath("/profile");
+
+    return {
+      success: true,
+      data: true,
+      message: "User blocked successfully.",
+    };
+  } catch (error) {
+    console.error("Toggle block error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to update block status.",
     };
   }
 }
