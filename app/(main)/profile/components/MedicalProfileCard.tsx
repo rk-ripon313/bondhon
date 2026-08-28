@@ -1,58 +1,27 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { formatDate } from "@/lib/helpers/date";
 import { UserProfile } from "@/types/user.type";
 import {
   Award,
   CheckCircle2,
   Droplet,
-  Pencil,
   Ruler,
-  Scale,
+  Weight,
   XCircle,
 } from "lucide-react";
+import ProfileCardHeader from "./ProfileCardHeader";
 
 export default function MedicalProfileCard({ user }: { user: UserProfile }) {
-  const formatDate = (date?: Date | string) => {
-    if (!date) return "Never";
-
-    return new Date(date).toLocaleDateString("en-BD", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
   return (
     <Card className="border-border/60 bg-app-card shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-        <div className="flex min-w-0 items-start gap-3">
-          {/* Header Icon */}
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/50 text-muted-foreground">
-            <Droplet className="size-4" />
-          </div>
-
-          <div className="min-w-0">
-            <CardTitle className="text-base font-semibold">
-              Medical & Donor Profile
-            </CardTitle>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              Your medical and donor information
-            </p>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="shrink-0 gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-app-background cursor-pointer"
-        >
-          <Pencil className="size-3.5" />
-          <span className="hidden sm:inline">Edit</span>
-        </Button>
-      </CardHeader>
+      <ProfileCardHeader
+        icon={<Droplet className="size-4" />}
+        title=" Medical & Donor Profile"
+        description=" Your medical and donor information"
+        defaultTab="medical"
+        user={user}
+      />
 
       <CardContent className="space-y-5 border-t border-border/50 pt-5">
         {/* Blood & Donation Summary */}
@@ -99,7 +68,9 @@ export default function MedicalProfileCard({ user }: { user: UserProfile }) {
             <p className="text-xs text-muted-foreground">Last Donation</p>
 
             <p className="mt-1 text-xs font-semibold text-foreground">
-              {formatDate(user.lastDonationDate)}
+              {user.lastDonationDate
+                ? formatDate(user.lastDonationDate)
+                : "Never"}
             </p>
           </div>
         </div>
@@ -122,7 +93,7 @@ export default function MedicalProfileCard({ user }: { user: UserProfile }) {
 
           <div className="flex items-center gap-3 rounded-xl border border-border/40 bg-background/40 p-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60">
-              <Scale className="size-4 text-muted-foreground" />
+              <Weight className="size-4 text-muted-foreground" />
             </div>
 
             <div className="min-w-0">

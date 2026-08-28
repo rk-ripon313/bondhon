@@ -1,12 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/helpers/date";
 import { UserProfile } from "@/types/user.type";
-import { CalendarDays, Mail, Pencil, Phone, UserRound } from "lucide-react";
-
-type Props = {
-  user: UserProfile;
-};
+import { CalendarDays, Mail, Phone, UserRound } from "lucide-react";
+import ProfileCardHeader from "./ProfileCardHeader";
 
 function InfoItem({
   icon: Icon,
@@ -34,37 +30,16 @@ function InfoItem({
   );
 }
 
-export default function PersonalInfoCard({ user }: Props) {
+export default function PersonalInfoCard({ user }: { user: UserProfile }) {
   return (
     <Card className="border-border/60 bg-app-card shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-        <div className="flex min-w-0 items-start gap-3">
-          {/* Header Icon */}
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/50 text-muted-foreground">
-            <UserRound className="size-4" />
-          </div>
-
-          <div className="min-w-0">
-            <CardTitle className="text-base font-semibold">
-              Personal Information
-            </CardTitle>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              Your basic account and personal details
-            </p>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="shrink-0 gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-app-background cursor-pointer"
-        >
-          <Pencil className="size-3.5" />
-          <span className="hidden sm:inline">Edit</span>
-        </Button>
-      </CardHeader>
+      <ProfileCardHeader
+        icon={<UserRound className="size-4" />}
+        title="Personal Information"
+        description="Your basic account and personal details"
+        defaultTab="personal"
+        user={user}
+      />
 
       <CardContent className="grid gap-x-5 gap-y-5 border-t border-border/50 pt-5 sm:grid-cols-2">
         <InfoItem icon={Mail} label="Email Address" value={user.email} />

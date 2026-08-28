@@ -14,6 +14,8 @@ export default async function ProfilePage() {
   }
   // console.log(user);
 
+  const { followers, following, blockedUsers, ...editUser } = user;
+
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
       <div className="space-y-6">
@@ -22,12 +24,12 @@ export default async function ProfilePage() {
 
         {/* Profile Information */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <PersonalInfoCard user={user} />
-          <MedicalProfileCard user={user} />
+          <PersonalInfoCard user={editUser} />
+          <MedicalProfileCard user={editUser} />
         </div>
 
         {/* Location */}
-        <LocationCard user={user} />
+        <LocationCard user={editUser} />
 
         {/* User Activity */}
         <UserActivityTabs />

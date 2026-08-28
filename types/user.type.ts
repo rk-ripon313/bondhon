@@ -30,6 +30,7 @@ export interface UserProfile {
 
   followers?: string[];
   following?: string[];
+  blockedUsers?: string[];
 
   isAvailableForDonate?: boolean;
   lastDonationDate?: Date | string;
