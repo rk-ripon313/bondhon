@@ -1,4 +1,4 @@
-import { GENDERS } from "@/constants";
+import { BLOOD_GROUPS, GENDERS } from "@/constants";
 import { calculateAge } from "@/lib/helpers/date";
 import { z } from "zod";
 
@@ -55,3 +55,35 @@ export const updatePersonalSchema = z.object({
 });
 
 export type UpdatePersonalInput = z.infer<typeof updatePersonalSchema>;
+
+export const updateMedicalSchema = z.object({
+  bloodGroup: z.enum(BLOOD_GROUPS, {
+    message: "Blood group is required",
+  }),
+
+  height: z
+    .string()
+    .trim()
+    .refine((value) => {
+      if (!value) return true;
+
+      const height = Number(value);
+
+      return Number.isFinite(height) && height >= 50 && height <= 250;
+    }, "Enter a valid height between 50 and 250 cm")
+    .optional(),
+
+  weight: z
+    .string()
+    .trim()
+    .refine((value) => {
+      if (!value) return true;
+
+      const weight = Number(value);
+
+      return Number.isFinite(weight) && weight >= 20 && weight <= 300;
+    }, "Enter a valid weight between 20 and 300 kg")
+    .optional(),
+});
+
+export type UpdateMedicalInput = z.infer<typeof updateMedicalSchema>;
