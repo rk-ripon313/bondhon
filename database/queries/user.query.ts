@@ -4,7 +4,9 @@ import { replaceMongoIdInObject } from "@/lib/helpers/transform-id";
 import { User } from "@/models/user.model";
 import { UserProfile } from "@/types/user.type";
 
-/** Get the currently authenticated user */
+/**
+ *  Get the currently authenticated user
+ */
 
 export async function getCurrentUser(): Promise<UserProfile | null> {
   await dbConnect();
@@ -20,7 +22,39 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
   return replaceMongoIdInObject(user) as UserProfile | null;
 }
 
-/** Get the currently authenticated user's connections (followers and following) */
+/**
+ *  Check if a username is available
+ */
+
+export async function isUsernameAvailable(
+  username: string,
+  excludeUserId?: string,
+) {
+  const normalizedUsername = username.trim().toLowerCase();
+
+  if (!normalizedUsername) {
+    return false;
+  }
+
+  const query: {
+    username: string;
+    _id?: { $ne: string };
+  } = {
+    username: normalizedUsername,
+  };
+
+  if (excludeUserId) {
+    query._id = { $ne: excludeUserId };
+  }
+
+  const existingUser = await User.exists(query);
+
+  return !existingUser;
+}
+
+/**
+ *  Get the currently authenticated user's connections (followers and following)
+ */
 
 export async function getCurrentUserConnections() {
   const session = await auth();

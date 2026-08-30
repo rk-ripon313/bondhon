@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getCurrentUser } from "@/database/queries/user.query";
+import {
+  getCurrentUser,
+  isUsernameAvailable,
+} from "@/database/queries/user.query";
 import { dbConnect } from "@/lib/db/db-connect";
 import { calculateAge } from "@/lib/helpers/date";
 import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
@@ -14,6 +17,7 @@ type UpdateUserData = Partial<
     UserProfile,
     | "name"
     | "nickname"
+    | "username"
     | "phone"
     | "image"
     | "bloodGroup"
@@ -47,6 +51,29 @@ export async function updateUserField(updates: UpdateUserData) {
 
     await dbConnect();
 
+    // Username changed → verify uniqueness again on the server
+    if (updates.username) {
+      const newUsername = updates.username.trim().toLowerCase();
+      const currentUsername = user.username?.toLowerCase();
+
+      if (newUsername !== currentUsername) {
+        const usernameAvailable = await isUsernameAvailable(
+          newUsername,
+          user.id,
+        );
+
+        if (!usernameAvailable) {
+          return {
+            success: false,
+            field: "username",
+            message: "Username is already taken.",
+          };
+        }
+
+        updates.username = newUsername;
+      }
+    }
+
     const updatedUser = await User.findOneAndUpdate(
       { email: user.email },
       { $set: updates },
@@ -76,6 +103,43 @@ export async function updateUserField(updates: UpdateUserData) {
       success: false,
       message:
         error instanceof Error ? error.message : "Failed to update profile.",
+    };
+  }
+}
+
+/**
+ * Checks if a username is available for the current user.
+ */
+export async function checkUsername(username: string) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user?.id) {
+      return {
+        success: false,
+        available: false,
+        message: "Unauthorized.",
+      };
+    }
+
+    await dbConnect();
+
+    const available = await isUsernameAvailable(username, user.id);
+
+    return {
+      success: true,
+      available,
+      message: available
+        ? "Username is available."
+        : "Username is already taken.",
+    };
+  } catch (error) {
+    console.error("Check username error:", error);
+
+    return {
+      success: false,
+      available: false,
+      message: "Failed to check username availability.",
     };
   }
 }

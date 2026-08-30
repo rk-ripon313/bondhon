@@ -40,52 +40,69 @@ export default function ProfileEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl  rounded-2xl border-border bg-app-card  text-app-foreground shadow-lg ">
-        <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
+      <DialogContent className="flex h-[min(680px,calc(100vh-2rem))] w-[calc(100%-2rem)] !max-w-3xl flex-col gap-0 overflow-hidden rounded-2xl border-border bg-app-card p-0 text-app-foreground shadow-xl">
+        {/* Header */}
+        <DialogHeader className="shrink-0 border-b border-border/50 px-6 py-5">
+          <DialogTitle className="text-xl font-bold">Edit Profile</DialogTitle>
 
-          <DialogDescription>
+          <DialogDescription className="text-xs text-muted-foreground">
             Update your personal, medical, and location information.
           </DialogDescription>
         </DialogHeader>
-
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as EditTab)}
-          className="mt-2 w-full"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          <TabsList className="grid w-full grid-cols-3 rounded-xl bg-app-background ">
-            <TabsTrigger
+          {/* Tabs */}
+          <div className="shrink-0 px-6 pt-4">
+            <TabsList className="grid h-10 w-full grid-cols-3 rounded-xl bg-app-background p-1">
+              <TabsTrigger
+                value="personal"
+                className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+              >
+                Personal
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="medical"
+                className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+              >
+                Medical
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="location"
+                className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+              >
+                Location
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <TabsContent
               value="personal"
-              className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+              className="mt-0 focus-visible:outline-none"
             >
-              Personal
-            </TabsTrigger>
-            <TabsTrigger
+              <PersonalTab user={user} onSuccess={onSuccess} />
+            </TabsContent>
+
+            <TabsContent
               value="medical"
-              className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+              className="mt-0 focus-visible:outline-none"
             >
-              Medical
-            </TabsTrigger>
-            <TabsTrigger
+              <MedicalTab user={user} onSuccess={onSuccess} />
+            </TabsContent>
+
+            <TabsContent
               value="location"
-              className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+              className="mt-0 focus-visible:outline-none"
             >
-              Location
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="personal" className="mt-5">
-            <PersonalTab user={user} onSuccess={onSuccess} />
-          </TabsContent>
-
-          <TabsContent value="medical" className="mt-5">
-            <MedicalTab user={user} onSuccess={onSuccess} />
-          </TabsContent>
-
-          <TabsContent value="location" className="mt-5">
-            <LocationTab user={user} onSuccess={onSuccess} />
-          </TabsContent>
+              <LocationTab user={user} onSuccess={onSuccess} />
+            </TabsContent>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
