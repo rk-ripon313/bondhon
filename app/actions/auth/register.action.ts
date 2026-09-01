@@ -9,6 +9,24 @@ import {
 } from "@/lib/validations/auth/register.schema";
 import { User } from "@/models/user.model";
 
+// Generate a unique username based on the user's name, current timestamp, and a random number
+
+function generateUsername(name: string) {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 15);
+
+  const timestamp = Date.now().toString().slice(-6);
+
+  const random = Math.floor(100 + Math.random() * 900);
+
+  return `${base || "user"}${timestamp}${random}`;
+}
+
+// Register a new user
+
 export async function registerUser(data: RegisterFormInput) {
   try {
     // Validate incoming data
@@ -42,12 +60,21 @@ export async function registerUser(data: RegisterFormInput) {
         };
       }
     }
+
+    //unique username
+    let username = generateUsername(userData.name);
+
+    while (await User.exists({ username })) {
+      username = generateUsername(userData.name);
+    }
+
     // Hash password
     const hashedPassword = await hash(password, 12);
 
     // Create user
     await User.create({
       ...userData,
+      username,
       password: hashedPassword,
       dateOfBirth: new Date(dob),
     });
