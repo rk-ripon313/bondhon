@@ -4,6 +4,6 @@ export interface LocationOption {
   district: string;
   coordinates: {
     type: "Point";
-    coordinates: number[];
+    coordinates: [number, number];
   };
 }

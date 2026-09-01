@@ -25,6 +25,7 @@ type UpdateUserData = Partial<
     | "dateOfBirth"
     | "height"
     | "weight"
+    | "location"
   >
 >;
 

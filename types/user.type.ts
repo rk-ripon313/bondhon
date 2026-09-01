@@ -26,6 +26,10 @@ export interface UserProfile {
     district?: string;
     area?: string;
     address?: string;
+    coordinates?: {
+      type: "Point";
+      coordinates: [number, number];
+    };
   };
 
   followers?: string[];
