@@ -1,3 +1,6 @@
+import { LocationOption } from "@/types/location.type";
+import { replaceMongoIdInObject } from "../helpers/transform-id";
+
 export async function findMe() {
   if (typeof window === "undefined" || !navigator.geolocation) {
     throw new Error("Geolocation is not supported by your browser");
@@ -24,5 +27,7 @@ export async function findMe() {
     );
   }
 
-  return res.json();
+  const data = await res.json();
+
+  return data ? (replaceMongoIdInObject(data) as LocationOption) : null;
 }

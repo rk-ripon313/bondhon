@@ -1,5 +1,5 @@
 export interface LocationOption {
-  _id: string;
+  id: string;
   area: string;
   district: string;
   coordinates: {
