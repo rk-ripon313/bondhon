@@ -352,7 +352,7 @@ export default function RegisterForm() {
               {suggestions.length > 0 ? (
                 suggestions.map((item) => (
                   <button
-                    key={item._id}
+                    key={item.id}
                     type="button"
                     onClick={() => selectLocation(item)}
                     className="block w-full px-4 py-2.5 text-left text-sm hover:bg-muted font-medium text-foreground transition-colors"
