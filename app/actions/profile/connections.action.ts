@@ -23,8 +23,8 @@ export async function loadUserConnections() {
 
     return {
       success: true,
-      followers: connections.followers,
-      following: connections.following,
+      followers: connections.followers ?? [],
+      following: connections.following ?? [],
     };
   } catch (error) {
     console.error("Load user connections error:", error);
