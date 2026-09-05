@@ -1,6 +1,6 @@
 "use client";
 
-import CreateBloodRequestModal from "@/components/blood-request/CreateBloodRequestModal";
+import BloodRequestModal from "@/components/blood-request/BloodRequestModal";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,7 +16,7 @@ export default function UserActivityTabs({
   requests = [],
   events = [],
 }: UserActivityTabsProps) {
-  const [isCreateRequestOpen, setIsCreateRequestOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-border/60 bg-app-card shadow-sm">
@@ -69,7 +69,7 @@ export default function UserActivityTabs({
                 className="bg-app-primary text-white hover:bg-app-primary/90 shrink-0 gap-1.5 font-semibold cursor-pointer"
                 type="button"
                 size="sm"
-                onClick={() => setIsCreateRequestOpen(true)}
+                onClick={() => setOpen(true)}
               >
                 <Plus className="size-4" />
                 <span className="hidden sm:inline">Create Request</span>
@@ -131,10 +131,7 @@ export default function UserActivityTabs({
         </Tabs>
       </div>
 
-      <CreateBloodRequestModal
-        open={isCreateRequestOpen}
-        onOpenChange={setIsCreateRequestOpen}
-      />
+      <BloodRequestModal mode="create" open={open} onOpenChange={setOpen} />
     </section>
   );
 }
