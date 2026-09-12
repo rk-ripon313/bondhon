@@ -1,14 +1,16 @@
 "use client";
 
+import BloodRequestCard from "@/components/blood-request/BloodRequestCard";
 import BloodRequestModal from "@/components/blood-request/BloodRequestModal";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BloodRequestCardData } from "@/types/blood-request.type";
 import { Activity, Calendar, Plus } from "lucide-react";
 import { useState } from "react";
 
 type UserActivityTabsProps = {
-  requests?: any[];
+  requests?: BloodRequestCardData[];
   events?: any[];
 };
 
@@ -80,7 +82,13 @@ export default function UserActivityTabs({
             {/* Requests */}
             {requests.length > 0 ? (
               <div className="space-y-3">
-                {/* request cards will be added here */}
+                {requests.map((request) => (
+                  <BloodRequestCard
+                    key={request.id}
+                    request={request}
+                    isOwner={true}
+                  />
+                ))}
               </div>
             ) : (
               <EmptyState
