@@ -1,33 +1,14 @@
 "use client";
 
-import {
-  Activity,
-  ArrowUpRight,
-  Building2,
-  Flag,
-  MapPin,
-  MoreHorizontal,
-  Pencil,
-  Share2,
-  Trash2,
-  UserRoundX,
-  Users,
-} from "lucide-react";
+import { Activity, ArrowUpRight, Building2, MapPin, Users } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { formatDateTime, getTimeAgo } from "@/lib/helpers/date";
 import { getStatusStyles } from "@/lib/helpers/status";
 import { BloodRequestCardData } from "@/types/blood-request.type";
 import Link from "next/link";
-import { toast } from "sonner";
+import BloodRequestActions from "./BloodRequestActions";
 
 interface BloodRequestCardProps {
   request: BloodRequestCardData;
@@ -62,7 +43,6 @@ export default function BloodRequestCard({
   return (
     <article className="group overflow-hidden rounded-2xl border border-border/60 bg-app-card shadow-sm transition-shadow hover:shadow-md">
       {/* Header */}
-
       <div className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="flex min-w-0 items-center gap-3">
           <Link href={`/user/${request.requester.username}`}>
@@ -88,101 +68,27 @@ export default function BloodRequestCard({
           </div>
         </div>
 
-        {/* Status + More */}
+        {/* Status + actions dropdown */}
         <div className="flex shrink-0 items-center gap-1.5">
           <div
             className={`flex items-center gap-1.5 text-xs font-medium ${statusStyles.text}`}
             title={`Status: ${statusStyles.label}`}
           >
             <span
-              className={`size-1.5 rounded-full ${statusStyles.dot}`}
+              className={`size-1.5 rounded-full animate-pulse ${statusStyles.dot}`}
               aria-hidden="true"
             />
 
             <span className="hidden sm:inline">{statusStyles.label}</span>
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 cursor-pointer rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <MoreHorizontal className="size-4" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-44">
-              {isOwner && request.status === "active" && (
-                <>
-                  <DropdownMenuItem className="cursor-pointer gap-2">
-                    <Pencil className="size-4" />
-                    Edit Request
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem className="cursor-pointer gap-2 text-red-500 focus:text-red-500">
-                    <Trash2 className="size-4" />
-                    Delete Request
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-                </>
-              )}
-
-              {/* Share */}
-              <DropdownMenuItem
-                className="cursor-pointer gap-2"
-                onClick={async () => {
-                  const shareData = {
-                    title: `Blood Request by ${requesterName} - ${request.bloodGroupNeeded} Needed`,
-                    text: `I need ${request.quantity} ${request.quantity === 1 ? "bag" : "bags"} of ${request.bloodGroupNeeded} blood.`,
-                    url: `${window.location.origin}/blood-requests/${request.id}`,
-                  };
-
-                  try {
-                    if (navigator.share) {
-                      await navigator.share(shareData);
-                      toast.success("Blood request shared successfully!");
-                    } else {
-                      await navigator.clipboard.writeText(shareData.url);
-                      toast.success(
-                        "Link copied to clipboard! Share it anywhere.",
-                      );
-                    }
-                  } catch (error) {
-                    console.error("Error sharing blood request:", error);
-                  }
-                }}
-              >
-                <Share2 className="size-4" />
-                Share
-              </DropdownMenuItem>
-
-              {!isOwner && (
-                <>
-                  <DropdownMenuItem className="cursor-pointer gap-2">
-                    <UserRoundX className="size-4" />
-                    Block User
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem className="cursor-pointer gap-2 text-red-500 focus:text-red-500">
-                    <Flag className="size-4" />
-                    Report
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Actions dropdown */}
+          <BloodRequestActions request={request} isOwner={isOwner} />
         </div>
       </div>
 
       {/* Main Content */}
+
       <div className="px-5 pb-5 pt-5 sm:px-6 sm:pb-6">
-        {/* Blood / Needed Before / Urgency */}
         <div className="rounded-xl border border-border/50 bg-muted/20 px-4 py-3.5">
           <div className="flex items-center">
             {/* Blood */}

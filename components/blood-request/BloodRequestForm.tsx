@@ -20,11 +20,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { createBloodRequest } from "@/app/actions/blood-request/create-request.action";
+import {
+  createBloodRequest,
+  updateBloodRequest,
+} from "@/app/actions/blood-request/blood-request.action";
 import { debounce } from "@/lib/helpers/debounce";
 import { getErrorMessage } from "@/lib/helpers/error";
 import { findMe } from "@/lib/location/find-me";
 import { searchLocations } from "@/lib/location/search-location";
+import { BloodRequestCardData } from "@/types/blood-request.type";
 import { LocationOption } from "@/types/location.type";
 import { Loader2, Navigation, Search, X } from "lucide-react";
 import { useState } from "react";
@@ -32,7 +36,7 @@ import { toast } from "sonner";
 
 interface BloodRequestFormProps {
   mode?: "create" | "edit";
-  request?: BloodRequestFormInput;
+  request?: BloodRequestCardData;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -188,7 +192,10 @@ export default function BloodRequestForm({
 
   const onSubmit = async (data: BloodRequestFormInput) => {
     try {
-      const result = await createBloodRequest(data);
+      const result =
+        isEditMode && request
+          ? await updateBloodRequest(request.id, data)
+          : await createBloodRequest(data);
 
       if (!result.success) {
         toast.error(result.message);
@@ -198,8 +205,10 @@ export default function BloodRequestForm({
       toast.success(result.message);
       onOpenChange(false);
     } catch (error) {
-      console.error("Register Error:", error);
-
+      console.error(
+        `${isEditMode ? "Update" : "Create"} Blood Request Error:`,
+        error,
+      );
       toast.error(getErrorMessage(error));
     }
   };
@@ -219,13 +228,15 @@ export default function BloodRequestForm({
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Blood Group */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium">Blood Group</Label>
+              <Label className="text-xs font-medium">
+                Blood Group <span className="text-rose-500">*</span>
+              </Label>
               <Controller
                 name="bloodGroupNeeded"
                 control={control}
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="h-10 w-full text-sm">
+                    <SelectTrigger className="h-10 w-full text-sm font-semibold">
                       <SelectValue placeholder="Select blood group" />
                     </SelectTrigger>
                     <SelectContent>
@@ -258,7 +269,7 @@ export default function BloodRequestForm({
                 {...register("quantity", {
                   valueAsNumber: true,
                 })}
-                className="h-10 w-full text-sm"
+                className="h-8 w-full text-sm"
               />
 
               {errors.quantity && (
@@ -283,7 +294,17 @@ export default function BloodRequestForm({
 
                     <SelectContent>
                       {REQUEST_URGENCY.map((item) => (
-                        <SelectItem key={item} value={item}>
+                        <SelectItem
+                          key={item}
+                          value={item}
+                          className={
+                            item === "critical"
+                              ? "text-red-500"
+                              : item === "urgent"
+                                ? "text-orange-500"
+                                : "text-app-secondary"
+                          }
+                        >
                           <span className="capitalize">{item}</span>
                         </SelectItem>
                       ))}
@@ -395,10 +416,11 @@ export default function BloodRequestForm({
                       onClick={() => selectLocation(item)}
                       className="block w-full px-4 py-2.5 text-left text-sm hover:bg-muted font-medium text-foreground transition-colors"
                     >
-                      <span className="block text-sm text-gray-800">
+                      <span className="block text-sm font-medium text-foreground">
                         {item.area}
                       </span>
-                      <span className="text-xs text-gray-400">
+
+                      <span className="text-xs text-muted-foreground">
                         {item.district} District
                       </span>
                     </button>
@@ -471,7 +493,7 @@ export default function BloodRequestForm({
               <Input
                 id="contactNumber"
                 type="tel"
-                placeholder="017XXXXXXXX"
+                placeholder="015XXXXXXXX"
                 {...register("contactNumber")}
                 className="h-10 w-full text-sm"
               />

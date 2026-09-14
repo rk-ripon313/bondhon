@@ -27,7 +27,13 @@ export const bloodRequestSchema = z.object({
 
   location: locationSchema,
 
-  neededBefore: z.string().min(1, "Please select when blood is needed"),
+  neededBefore: z
+    .string()
+    .min(1, "Please select when blood is needed")
+    .refine(
+      (value) => new Date(value).getTime() > Date.now(),
+      "Needed before must be a future date and time",
+    ),
 
   contactNumber: z
     .string()
@@ -42,7 +48,7 @@ export const bloodRequestSchema = z.object({
   additionalNotes: z
     .string()
     .trim()
-    .max(1000, "Notes cannot exceed 1000 characters")
+    .max(500, "Notes cannot exceed 500 characters")
     .optional()
     .or(z.literal("")),
 });

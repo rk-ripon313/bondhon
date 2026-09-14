@@ -1,7 +1,7 @@
 "use client";
 
-import BloodRequestCard from "@/components/blood-request/BloodRequestCard";
 import BloodRequestModal from "@/components/blood-request/BloodRequestModal";
+import BloodRequestCard from "@/components/blood-request/card/BloodRequestCard";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

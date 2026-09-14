@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BloodRequestCardData } from "@/types/blood-request.type";
 import { Droplet } from "lucide-react";
 import BloodRequestForm from "./BloodRequestForm";
 
@@ -14,12 +15,14 @@ interface BloodRequestModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode?: "create" | "edit";
+  request?: BloodRequestCardData;
 }
 
 export default function BloodRequestModal({
   open,
   onOpenChange,
   mode = "create",
+  request,
 }: BloodRequestModalProps) {
   const isEditMode = mode === "edit";
 
@@ -46,7 +49,11 @@ export default function BloodRequestModal({
         </DialogHeader>
 
         {/* Form */}
-        <BloodRequestForm mode={mode} onOpenChange={onOpenChange} />
+        <BloodRequestForm
+          mode={mode}
+          onOpenChange={onOpenChange}
+          request={request}
+        />
       </DialogContent>
     </Dialog>
   );

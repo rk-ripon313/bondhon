@@ -1,3 +1,6 @@
+import { BLOOD_GROUPS, REQUEST_URGENCY } from "@/constants";
+import { LocationData } from "./location.type";
+
 export type BloodRequestCardData = {
   id: string;
 
@@ -7,18 +10,14 @@ export type BloodRequestCardData = {
     image?: string;
   };
 
-  bloodGroupNeeded: string;
+  bloodGroupNeeded: (typeof BLOOD_GROUPS)[number];
   quantity: number;
-  urgency: string;
+  urgency: (typeof REQUEST_URGENCY)[number];
 
-  contactNumber?: string | number;
+  contactNumber?: string;
   hospitalName?: string;
 
-  location?: {
-    district?: string;
-    area?: string;
-    address?: string;
-  };
+  location?: LocationData;
 
   neededBefore: Date;
   additionalNotes?: string;

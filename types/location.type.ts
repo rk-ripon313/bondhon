@@ -7,3 +7,13 @@ export interface LocationOption {
     coordinates: [number, number];
   };
 }
+
+export interface LocationData {
+  district?: string;
+  area?: string;
+  address?: string;
+  coordinates?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+}
