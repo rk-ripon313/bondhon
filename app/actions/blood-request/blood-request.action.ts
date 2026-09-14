@@ -95,6 +95,19 @@ export async function updateBloodRequest(
         message: "Only active blood requests can be edited.",
       };
     }
+    if (request.neededBefore <= new Date()) {
+      return {
+        success: false,
+        message: "This blood request has already expired.",
+      };
+    }
+
+    if (request.assignedDonors.length > 0) {
+      return {
+        success: false,
+        message: "A donor has already been assigned to this request.",
+      };
+    }
 
     await BloodRequest.updateOne(
       { _id: requestId },
@@ -121,6 +134,76 @@ export async function updateBloodRequest(
     return {
       success: false,
       message: "An error occurred while updating the blood request.",
+    };
+  }
+}
+
+/** * Deletes a blood request from the database.
+ * @param {string} requestId - The ID of the blood request to delete.
+ * @returns {Promise<{ success: boolean; message: string }>} - An object indicating the success status and a message.
+ */
+
+export async function deleteBloodRequest(requestId: string) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user?.id) {
+      return { success: false, message: "User not authenticated." };
+    }
+
+    await dbConnect();
+
+    const request = await BloodRequest.findOne({
+      _id: requestId,
+      requester: user.id,
+    });
+
+    if (!request) {
+      return {
+        success: false,
+        message: "Blood request not found or you are not allowed to delete it.",
+      };
+    }
+
+    if (request.status !== "active") {
+      return {
+        success: false,
+        message: "Only active blood requests can be deleted.",
+      };
+    }
+
+    if (request.neededBefore <= new Date()) {
+      return {
+        success: false,
+        message: "This blood request has already expired.",
+      };
+    }
+
+    if (request.assignedDonors.length > 0) {
+      return {
+        success: false,
+        message: "A donor has already been assigned to this request.",
+      };
+    }
+
+    await BloodRequest.deleteOne({
+      _id: requestId,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/profile");
+    revalidatePath("/blood-requests");
+
+    return {
+      success: true,
+      message: "Blood request deleted successfully.",
+    };
+  } catch (error) {
+    console.error("Delete Blood Request Error:", error);
+
+    return {
+      success: false,
+      message: "An error occurred while deleting the blood request.",
     };
   }
 }

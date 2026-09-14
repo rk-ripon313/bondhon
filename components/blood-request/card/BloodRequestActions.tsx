@@ -19,7 +19,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { deleteBloodRequest } from "@/app/actions/blood-request/blood-request.action";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { BloodRequestCardData } from "@/types/blood-request.type";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import BloodRequestModal from "../BloodRequestModal";
 
@@ -32,11 +35,37 @@ export default function BloodRequestActions({
   request,
   isOwner,
 }: BloodRequestActionsProps) {
+  const { refresh } = useRouter();
   const requesterName = request.requester?.name || "Unknown User";
   const canEditOrDelete = isOwner && request.status === "active";
 
   const [openEdit, setOpenEdit] = useState(false);
 
+  //delete states
+  const [openDelete, setOpenDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+
+      const result = await deleteBloodRequest(request.id);
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      refresh();
+    } catch (error) {
+      console.error("Delete Blood Request Error:", error);
+      toast.error("Failed to delete blood request.");
+    } finally {
+      setIsDeleting(false);
+      setOpenDelete(false);
+    }
+  };
   return (
     <>
       <DropdownMenu>
@@ -63,7 +92,10 @@ export default function BloodRequestActions({
                 Edit Request
               </DropdownMenuItem>
 
-              <DropdownMenuItem className="cursor-pointer gap-2 text-red-500 focus:text-red-500">
+              <DropdownMenuItem
+                className="cursor-pointer gap-2 text-red-500 focus:text-red-500"
+                onClick={() => setOpenDelete(true)}
+              >
                 <Trash2 className="size-4" />
                 Delete Request
               </DropdownMenuItem>
@@ -123,6 +155,16 @@ export default function BloodRequestActions({
         request={request}
         open={openEdit}
         onOpenChange={setOpenEdit}
+      />
+      {/* Delete Confirmation */}{" "}
+      <ConfirmDialog
+        open={openDelete}
+        onOpenChange={setOpenDelete}
+        title="Delete Blood Request?"
+        description="This action cannot be undone. Are you sure you want to delete this blood request?"
+        confirmText="Delete Request"
+        loading={isDeleting}
+        onConfirm={handleDelete}
       />
     </>
   );
