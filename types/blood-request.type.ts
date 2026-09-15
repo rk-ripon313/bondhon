@@ -5,6 +5,7 @@ export type BloodRequestCardData = {
   id: string;
 
   requester: {
+    id: string;
     name: string;
     username: string;
     image?: string;
@@ -24,8 +25,11 @@ export type BloodRequestCardData = {
 
   status: string;
 
-  interestedDonors?: string[];
-  assignedDonors?: string[];
+  interestedCount: number;
+  assignedCount: number;
+
+  isInterested: boolean;
+  isOwner: boolean;
 
   createdAt?: Date | string;
   updatedAt?: Date | string;

@@ -2,7 +2,6 @@ import { Activity } from "lucide-react";
 import Link from "next/link";
 
 import { getBloodRequests } from "@/database/queries/blood-request.query";
-import { getCurrentUser } from "@/database/queries/user.query";
 
 import BloodRequestCard from "@/components/blood-request/card/BloodRequestCard";
 import EmptyState from "@/components/shared/EmptyState";
@@ -12,10 +11,7 @@ import BloodRequestFilters from "./components/BloodRequestFilters";
 import BloodRequestPagination from "./components/BloodRequestPagination";
 
 export default async function BloodRequestsPage() {
-  const [requests, currentUser] = await Promise.all([
-    getBloodRequests(),
-    getCurrentUser(),
-  ]);
+  const requests = await getBloodRequests();
 
   return (
     <div className="min-h-screen w-full bg-app-background px-4 py-8 sm:px-6 lg:px-8">
@@ -66,11 +62,7 @@ export default async function BloodRequestsPage() {
 
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {requests.map((request) => (
-                  <BloodRequestCard
-                    key={request.id}
-                    request={request}
-                    isOwner={currentUser?.id === request.requester.id}
-                  />
+                  <BloodRequestCard key={request.id} request={request} />
                 ))}
               </div>
 

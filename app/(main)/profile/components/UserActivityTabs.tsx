@@ -83,11 +83,7 @@ export default function UserActivityTabs({
             {requests.length > 0 ? (
               <div className="space-y-3">
                 {requests.map((request) => (
-                  <BloodRequestCard
-                    key={request.id}
-                    request={request}
-                    isOwner={true}
-                  />
+                  <BloodRequestCard key={request.id} request={request} />
                 ))}
               </div>
             ) : (

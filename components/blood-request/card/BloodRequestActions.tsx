@@ -26,18 +26,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import BloodRequestModal from "../BloodRequestModal";
 
-interface BloodRequestActionsProps {
-  request: BloodRequestCardData;
-  isOwner: boolean;
-}
-
 export default function BloodRequestActions({
   request,
-  isOwner,
-}: BloodRequestActionsProps) {
+}: {
+  request: BloodRequestCardData;
+}) {
   const { refresh } = useRouter();
   const requesterName = request.requester?.name || "Unknown User";
-  const canEditOrDelete = isOwner && request.status === "active";
+  const canEditOrDelete = request.isOwner && request.status === "active";
 
   const [openEdit, setOpenEdit] = useState(false);
 
@@ -132,7 +128,7 @@ export default function BloodRequestActions({
           </DropdownMenuItem>
 
           {/* Other User Actions */}
-          {!isOwner && (
+          {!request.isOwner && (
             <>
               <DropdownMenuItem className="cursor-pointer gap-2">
                 <UserRoundX className="size-4" />
