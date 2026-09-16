@@ -29,6 +29,7 @@ export type BloodRequestCardData = {
   assignedCount: number;
 
   isInterested: boolean;
+  isAssigned: boolean;
   isOwner: boolean;
 
   createdAt?: Date | string;

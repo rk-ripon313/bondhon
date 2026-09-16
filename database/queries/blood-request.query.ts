@@ -24,17 +24,22 @@ export async function getBloodRequests(requesterId?: string) {
   const requests = bloodRequests.map((request) => {
     const interestedDonors = (request.interestedDonors ??
       []) as Types.ObjectId[];
+    const assignedDonors = (request.assignedDonors ?? []) as Types.ObjectId[];
 
     return {
       ...request,
       requester: replaceMongoIdInObject(request.requester),
       interestedCount: interestedDonors.length,
-      assignedCount: request.assignedDonors?.length ?? 0,
+      assignedCount: assignedDonors.length,
 
       isInterested: currentUserId
         ? interestedDonors.some(
             (donorId) => donorId.toString() === currentUserId,
           )
+        : false,
+
+      isAssigned: currentUserId
+        ? assignedDonors.some((donorId) => donorId.toString() === currentUserId)
         : false,
 
       isOwner: currentUserId

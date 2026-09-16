@@ -1,14 +1,14 @@
 "use client";
 
-import { Activity, ArrowUpRight, Building2, MapPin, Users } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { formatDateTime, getTimeAgo } from "@/lib/helpers/date";
 import { getStatusStyles } from "@/lib/helpers/status";
 import { BloodRequestCardData } from "@/types/blood-request.type";
 import Link from "next/link";
 import BloodRequestActions from "./BloodRequestActions";
+import BloodRequestCardFooter from "./BloodRequestCardFooter";
 
 function getUrgencyClass(urgency: string) {
   switch (urgency) {
@@ -183,37 +183,7 @@ export default function BloodRequestCard({
       </div>
 
       {/* Footer */}
-      <div className="border-t border-border/60 bg-muted/20 px-4 py-3 sm:px-5">
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          {/* Donors Engagement Stats */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5 font-medium">
-              <Users className="h-3.5 w-3.5 text-blue-500" />
-              <span>{request.interestedCount} interested</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 font-medium">
-              <Activity className="h-3.5 w-3.5 text-emerald-500" />
-              <span>{request.assignedCount} assigned</span>
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <Link
-            href={`/blood-requests/${request.id}`}
-            className="self-end sm:self-auto"
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 shrink-0 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold text-app-secondary hover:bg-app-secondary/10 hover:text-app-secondary"
-            >
-              View Details
-              <ArrowUpRight className="size-3.5" />
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <BloodRequestCardFooter request={request} />
     </article>
   );
 }
