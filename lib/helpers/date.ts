@@ -1,3 +1,4 @@
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 /**
  * Calculates age based on the provided date of birth (DOB).
  * @param {string} dob - The date of birth in a string format (e.g., "YYYY-MM-DD").
@@ -79,4 +80,32 @@ export const getTimeAgo = (date?: Date | string) => {
 
   const years = Math.floor(days / 365);
   return `${years}y ago`;
+};
+
+/**
+ *  Get user time zone
+ */
+
+export const getUserTimezone = () => {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+};
+
+/**
+ * Convert user's local datetime input to UTC Date
+ */
+export const localDateTimeToUTC = (
+  dateTime: string,
+  timeZone = getUserTimezone(),
+) => {
+  return fromZonedTime(dateTime, timeZone);
+};
+
+/**
+ * Convert UTC Date to user's local datetime-local input value
+ */
+export const utcToLocalDateTimeInput = (
+  date: Date | string,
+  timeZone = getUserTimezone(),
+) => {
+  return formatInTimeZone(date, timeZone, "yyyy-MM-dd'T'HH:mm");
 };

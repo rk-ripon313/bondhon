@@ -2,6 +2,7 @@
 
 import { getCurrentUser } from "@/database/queries/user.query";
 import { dbConnect } from "@/lib/db/db-connect";
+import { localDateTimeToUTC } from "@/lib/helpers/date";
 import {
   BloodRequestFormInput,
   bloodRequestSchema,
@@ -15,7 +16,10 @@ import { revalidatePath } from "next/cache";
  * @returns {Promise<{ success: boolean; message: string }>} - An object indicating the success status and a message.
  */
 
-export async function createBloodRequest(data: BloodRequestFormInput) {
+export async function createBloodRequest(
+  data: BloodRequestFormInput,
+  timeZone: string,
+) {
   try {
     const validation = bloodRequestSchema.safeParse(data);
 
@@ -30,10 +34,15 @@ export async function createBloodRequest(data: BloodRequestFormInput) {
 
     await dbConnect();
 
+    const neededBefore = localDateTimeToUTC(
+      validation.data.neededBefore,
+      timeZone,
+    );
+
     await BloodRequest.create({
       ...validation.data,
       requester: user?.id,
-      neededBefore: new Date(validation.data.neededBefore),
+      neededBefore,
     });
 
     revalidatePath("/");
@@ -62,6 +71,7 @@ export async function createBloodRequest(data: BloodRequestFormInput) {
 export async function updateBloodRequest(
   requestId: string,
   data: BloodRequestFormInput,
+  timeZone: string,
 ) {
   try {
     const validation = bloodRequestSchema.safeParse(data);
@@ -109,12 +119,17 @@ export async function updateBloodRequest(
       };
     }
 
+    const neededBefore = localDateTimeToUTC(
+      validation.data.neededBefore,
+      timeZone,
+    );
+
     await BloodRequest.updateOne(
       { _id: requestId },
       {
         $set: {
           ...validation.data,
-          neededBefore: new Date(validation.data.neededBefore),
+          neededBefore,
         },
       },
     );

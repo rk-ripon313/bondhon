@@ -24,6 +24,7 @@ import {
   createBloodRequest,
   updateBloodRequest,
 } from "@/app/actions/blood-request/blood-request.action";
+import { getUserTimezone, utcToLocalDateTimeInput } from "@/lib/helpers/date";
 import { debounce } from "@/lib/helpers/debounce";
 import { getErrorMessage } from "@/lib/helpers/error";
 import { findMe } from "@/lib/location/find-me";
@@ -85,7 +86,7 @@ export default function BloodRequestForm({
       },
 
       neededBefore: request?.neededBefore
-        ? new Date(request.neededBefore).toISOString().slice(0, 16)
+        ? utcToLocalDateTimeInput(request.neededBefore)
         : "",
 
       contactNumber: request?.contactNumber ?? "",
@@ -192,10 +193,11 @@ export default function BloodRequestForm({
 
   const onSubmit = async (data: BloodRequestFormInput) => {
     try {
+      const timeZone = getUserTimezone();
       const result =
         isEditMode && request
-          ? await updateBloodRequest(request.id, data)
-          : await createBloodRequest(data);
+          ? await updateBloodRequest(request.id, data, timeZone)
+          : await createBloodRequest(data, timeZone);
 
       if (!result.success) {
         toast.error(result.message);
