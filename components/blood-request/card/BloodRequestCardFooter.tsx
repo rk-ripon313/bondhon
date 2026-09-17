@@ -3,24 +3,39 @@
 import { Activity, ArrowUpRight, Heart, Users } from "lucide-react";
 import Link from "next/link";
 
+import { toggleBloodRequestInterest } from "@/app/actions/blood-request/blood-request-donor.action";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BloodRequestCardData } from "@/types/blood-request.type";
-
-type BloodRequestCardFooterProps = {
-  request: BloodRequestCardData;
-};
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
 
 export default function BloodRequestCardFooter({
   request,
-}: BloodRequestCardFooterProps) {
+}: {
+  request: BloodRequestCardData;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
   const { isOwner, isAssigned, isInterested } = request;
 
-  const actionLabel = isAssigned
-    ? "I Can’t Donate"
-    : isInterested
-      ? "Not Interested"
-      : "I’m Interested";
+  const handleInterestToggle = () => {
+    if (isOwner || isAssigned || isPending) return;
+
+    startTransition(async () => {
+      const result = await toggleBloodRequestInterest(request.id);
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      router.refresh();
+    });
+  };
 
   return (
     <div className="border-t border-border/60 bg-muted/20 px-3 py-2.5 sm:px-5 sm:py-3">
@@ -29,10 +44,21 @@ export default function BloodRequestCardFooter({
         <Button
           variant={isAssigned ? "outline" : "default"}
           size="sm"
-          disabled={isOwner}
+          disabled={isOwner || isPending || isAssigned}
+          onClick={handleInterestToggle}
           className={cn(
             "h-8 shrink-0 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold sm:px-3",
-            !isAssigned && "bg-app-primary text-white hover:bg-app-primary/90",
+
+            !isInterested &&
+              !isAssigned &&
+              "bg-app-primary text-white hover:bg-app-primary/90",
+
+            isInterested &&
+              !isAssigned &&
+              "border border-app-primary/40 bg-app-primary/10 text-app-primary hover:bg-app-primary/20",
+
+            isAssigned && "cursor-not-allowed",
+
             isOwner && "cursor-not-allowed opacity-40",
           )}
         >

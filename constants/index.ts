@@ -13,12 +13,7 @@ export const BLOOD_GROUPS = [
   "O-",
 ] as const;
 
-export const REQUEST_STATUSES = [
-  "active",
-  "assigned",
-  "completed",
-  "expired",
-] as const;
+export const REQUEST_STATUSES = ["active", "completed", "expired"] as const;
 
 export const REQUEST_URGENCY = ["normal", "urgent", "critical"] as const;
 
