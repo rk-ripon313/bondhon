@@ -52,11 +52,13 @@ export async function toggleBloodRequestInterest(requestId: string) {
     const interestedDonors = (request.interestedDonors ??
       []) as Types.ObjectId[];
 
-    const assignedDonors = (request.assignedDonors ?? []) as Types.ObjectId[];
+    const assignedDonors = (request.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+    }[];
 
     // Assigned donors must use the assignment cancellation action.
     const isAssigned = assignedDonors.some(
-      (donorId) => donorId.toString() === userId,
+      (item) => item.donor.toString() === userId,
     );
 
     if (isAssigned) {

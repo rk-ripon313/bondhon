@@ -24,7 +24,10 @@ export async function getBloodRequests(requesterId?: string) {
   const requests = bloodRequests.map((request) => {
     const interestedDonors = (request.interestedDonors ??
       []) as Types.ObjectId[];
-    const assignedDonors = (request.assignedDonors ?? []) as Types.ObjectId[];
+
+    const assignedDonors = (request.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+    }[];
 
     return {
       ...request,
@@ -39,7 +42,7 @@ export async function getBloodRequests(requesterId?: string) {
         : false,
 
       isAssigned: currentUserId
-        ? assignedDonors.some((donorId) => donorId.toString() === currentUserId)
+        ? assignedDonors.some((item) => item.donor.toString() === currentUserId)
         : false,
 
       isOwner: currentUserId
