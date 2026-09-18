@@ -32,7 +32,33 @@ const bloodRequestSchema = new Schema(
     status: { type: String, enum: REQUEST_STATUSES, default: "active" },
 
     interestedDonors: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    assignedDonors: [{ type: Schema.Types.ObjectId, ref: "User" }],
+
+    assignedDonors: [
+      {
+        donor: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+
+        assignedAt: {
+          type: Date,
+          default: Date.now,
+        },
+
+        donationStatus: {
+          type: String,
+          enum: ["pending", "donated"],
+          default: "pending",
+        },
+
+        donatedAt: Date,
+
+        donorConfirmedAt: Date,
+
+        requesterConfirmedAt: Date,
+      },
+    ],
   },
   {
     timestamps: true,
