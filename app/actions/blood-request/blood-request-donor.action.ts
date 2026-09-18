@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentUser } from "@/database/queries/user.query";
 import { dbConnect } from "@/lib/db/db-connect";
+import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
 import { BloodRequest } from "@/models/blood-request.model";
 
 export async function toggleBloodRequestInterest(requestId: string) {
@@ -15,6 +16,13 @@ export async function toggleBloodRequestInterest(requestId: string) {
       return {
         success: false,
         message: "You must be logged in to show interest.",
+      };
+    }
+
+    if (!isUserEligibleForAction(user)) {
+      return {
+        success: false,
+        message: "Please complete your profile before showing interest.",
       };
     }
 

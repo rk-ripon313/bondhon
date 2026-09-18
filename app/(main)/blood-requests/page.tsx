@@ -3,12 +3,11 @@ import Link from "next/link";
 
 import { getBloodRequests } from "@/database/queries/blood-request.query";
 
+import BloodRequestFilters from "@/components/blood-request/BloodRequestFilters";
+import BloodRequestPagination from "@/components/blood-request/BloodRequestPagination";
 import BloodRequestCard from "@/components/blood-request/card/BloodRequestCard";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
-
-import BloodRequestFilters from "./components/BloodRequestFilters";
-import BloodRequestPagination from "./components/BloodRequestPagination";
 
 export default async function BloodRequestsPage() {
   const requests = await getBloodRequests();

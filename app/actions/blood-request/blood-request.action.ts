@@ -3,6 +3,7 @@
 import { getCurrentUser } from "@/database/queries/user.query";
 import { dbConnect } from "@/lib/db/db-connect";
 import { localDateTimeToUTC } from "@/lib/helpers/date";
+import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
 import {
   BloodRequestFormInput,
   bloodRequestSchema,
@@ -30,6 +31,14 @@ export async function createBloodRequest(
 
     if (!user?.id) {
       return { success: false, message: "User not authenticated." };
+    }
+
+    if (!isUserEligibleForAction(user)) {
+      return {
+        success: false,
+        message:
+          "Please complete your profile before creating a blood request.",
+      };
     }
 
     await dbConnect();
