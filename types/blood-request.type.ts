@@ -1,7 +1,7 @@
 import { BLOOD_GROUPS, REQUEST_URGENCY } from "@/constants";
 import { LocationData } from "./location.type";
 
-export type BloodRequestCardData = {
+export interface BloodRequestCardData {
   id: string;
 
   requester: {
@@ -9,6 +9,8 @@ export type BloodRequestCardData = {
     name: string;
     username: string;
     image?: string;
+    phone?: string;
+    email?: string;
   };
 
   bloodGroupNeeded: (typeof BLOOD_GROUPS)[number];
@@ -34,4 +36,29 @@ export type BloodRequestCardData = {
 
   createdAt?: Date | string;
   updatedAt?: Date | string;
-};
+}
+
+export interface BloodRequestDetailDonor {
+  id: string;
+  name: string;
+  username: string;
+  image?: string;
+  bloodGroup: string;
+  phone: string;
+  location: LocationData;
+}
+
+export interface BloodRequestAssignment {
+  donor: BloodRequestDetailDonor;
+
+  assignedAt: Date | string;
+  donationStatus: "pending" | "donated";
+  donatedAt?: Date | string;
+  donorConfirmedAt?: Date | string;
+  requesterConfirmedAt?: Date | string;
+}
+
+export interface BloodRequestDetailData extends BloodRequestCardData {
+  interestedDonors: BloodRequestDetailDonor[];
+  assignedDonors: BloodRequestAssignment[];
+}

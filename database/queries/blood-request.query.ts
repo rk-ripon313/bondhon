@@ -4,7 +4,13 @@ import {
   replaceMongoIdInObject,
 } from "@/lib/helpers/transform-id";
 import { BloodRequest } from "@/models/blood-request.model";
-import { BloodRequestCardData } from "@/types/blood-request.type";
+import {
+  BloodRequestAssignment,
+  BloodRequestCardData,
+  BloodRequestDetailData,
+  BloodRequestDetailDonor,
+} from "@/types/blood-request.type";
+import { LocationData } from "@/types/location.type";
 import { Types } from "mongoose";
 
 export async function getBloodRequests(requesterId?: string) {
@@ -52,4 +58,103 @@ export async function getBloodRequests(requesterId?: string) {
   });
 
   return replaceMongoIdInArray(requests) as BloodRequestCardData[];
+}
+
+interface PopulatedRequester {
+  _id: Types.ObjectId;
+  name: string;
+  username: string;
+  image?: string;
+  phone: string;
+}
+
+interface PopulatedDonor {
+  _id: Types.ObjectId;
+  name: string;
+  username: string;
+  image?: string;
+  bloodGroup: string;
+  phone: string;
+  location: LocationData;
+}
+
+interface PopulatedAssignment {
+  _id: Types.ObjectId;
+  donor: PopulatedDonor;
+  assignedAt: Date;
+  donationStatus: string;
+  donatedAt?: Date;
+  donorConfirmedAt?: Date;
+  requesterConfirmedAt?: Date;
+}
+
+export async function getBloodRequestById(
+  requestId: string,
+): Promise<BloodRequestDetailData | null> {
+  const currentUser = await getCurrentUser();
+  const currentUserId = currentUser?.id;
+
+  const bloodRequest = await BloodRequest.findById(requestId)
+    .populate({
+      path: "requester",
+      select: "name username image phone email",
+    })
+    .populate({
+      path: "interestedDonors",
+      select: "name username image bloodGroup phone location",
+    })
+    .populate({
+      path: "assignedDonors.donor",
+      select: "name username image bloodGroup location",
+    })
+    .lean();
+
+  if (!bloodRequest) return null;
+
+  const requester = replaceMongoIdInObject(
+    bloodRequest.requester as PopulatedRequester,
+  );
+
+  if (!requester) return null;
+
+  const interestedDonors = replaceMongoIdInArray(
+    bloodRequest.interestedDonors as PopulatedDonor[],
+  ) as BloodRequestDetailDonor[];
+
+  const assignedDonors = (
+    bloodRequest.assignedDonors as PopulatedAssignment[]
+  ).map((assignment) => ({
+    donor: replaceMongoIdInObject(assignment.donor)!,
+    assignedAt: assignment.assignedAt,
+    donationStatus: assignment.donationStatus,
+    donatedAt: assignment.donatedAt,
+    donorConfirmedAt: assignment.donorConfirmedAt,
+    requesterConfirmedAt: assignment.requesterConfirmedAt,
+  })) as BloodRequestAssignment[];
+
+  const isOwner = currentUserId ? requester.id === currentUserId : false;
+
+  const isInterested = currentUserId
+    ? (bloodRequest.interestedDonors as PopulatedDonor[]).some(
+        (donor) => donor._id.toString() === currentUserId,
+      )
+    : false;
+
+  const isAssigned = currentUserId
+    ? (bloodRequest.assignedDonors as PopulatedAssignment[]).some(
+        (assignment) => assignment.donor._id.toString() === currentUserId,
+      )
+    : false;
+
+  return {
+    ...replaceMongoIdInObject(bloodRequest),
+    requester,
+    interestedDonors,
+    assignedDonors,
+    interestedCount: interestedDonors.length,
+    assignedCount: assignedDonors.length,
+    isOwner,
+    isInterested,
+    isAssigned,
+  } as BloodRequestDetailData;
 }
