@@ -2,6 +2,7 @@ import { getBloodRequestById } from "@/database/queries/blood-request.query";
 
 import { notFound } from "next/navigation";
 import { BloodRequestDetailHeader } from "./components/BloodRequestDetailHeader";
+import { BloodRequestHero } from "./components/BloodRequestHero";
 
 export default async function BloodRequestDetailsPage({
   params,
@@ -21,6 +22,8 @@ export default async function BloodRequestDetailsPage({
   return (
     <div className="min-h-screen w-full bg-app-background px-4 py-8 sm:px-6 lg:px-8">
       <BloodRequestDetailHeader request={request} />
+
+      <BloodRequestHero request={request} />
     </div>
   );
 }
