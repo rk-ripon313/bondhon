@@ -54,6 +54,8 @@ export async function getBloodRequests(requesterId?: string) {
       isOwner: currentUserId
         ? request.requester._id.toString() === currentUserId
         : false,
+
+      currentUserId,
     };
   });
 
@@ -149,10 +151,13 @@ export async function getBloodRequestById(
   return {
     ...replaceMongoIdInObject(bloodRequest),
     requester,
+
     interestedDonors,
     assignedDonors,
     interestedCount: interestedDonors.length,
     assignedCount: assignedDonors.length,
+
+    currentUserId,
     isOwner,
     isInterested,
     isAssigned,

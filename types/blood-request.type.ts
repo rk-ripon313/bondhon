@@ -33,6 +33,7 @@ export interface BloodRequestCardData {
   isInterested: boolean;
   isAssigned: boolean;
   isOwner: boolean;
+  currentUserId?: string;
 
   createdAt?: Date | string;
   updatedAt?: Date | string;
