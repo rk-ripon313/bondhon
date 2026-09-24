@@ -10,15 +10,15 @@ import { getDistanceInKm } from "@/lib/location/distance";
 import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
 import { BloodRequest } from "@/models/blood-request.model";
 
+const MAX_INTEREST_DISTANCE_KM = 50;
+
 /**
  * Toggle the current user's interest in a blood request.
  *
- * Validates donor eligibility, blood group compatibility, and
- * service distance when adding interest.
+ * Removing interest only checks whether the user is already interested.
+ * Adding interest validates donor eligibility, availability,
+ * blood group compatibility, and service distance.
  */
-
-const MAX_INTEREST_DISTANCE_KM = 50;
-
 export async function toggleBloodRequestInterest(requestId: string) {
   try {
     const user = await getCurrentUser();
@@ -27,13 +27,6 @@ export async function toggleBloodRequestInterest(requestId: string) {
       return {
         success: false,
         message: "You must be logged in to show interest.",
-      };
-    }
-
-    if (!isUserEligibleForAction(user)) {
-      return {
-        success: false,
-        message: "Please complete your profile before showing interest.",
       };
     }
 
@@ -52,7 +45,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
 
     const userId = user.id;
 
-    // Request owner cannot show interest in own request.
+    // Cannot interact with your own request.
     if (request.requester.toString() === userId) {
       return {
         success: false,
@@ -60,7 +53,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
       };
     }
 
-    // Interest can only be changed while request is active.
+    // Only active requests can be modified.
     if (request.status !== "active") {
       return {
         success: false,
@@ -75,25 +68,11 @@ export async function toggleBloodRequestInterest(requestId: string) {
       donor: Types.ObjectId;
     }[];
 
-    const isAssigned = assignedDonors.some(
-      (item) => item.donor.toString() === userId,
-    );
-
-    if (isAssigned) {
-      return {
-        success: false,
-        message:
-          "You are already assigned to this request. Please cancel your assignment first.",
-      };
-    }
-
     const isInterested = interestedDonors.some(
       (donorId) => donorId.toString() === userId,
     );
 
-    // ---------------------------
-    // --> REMOVE INTEREST
-    // ---------------------------
+    // Remove interest.
     if (isInterested) {
       await BloodRequest.updateOne(
         { _id: requestId },
@@ -114,12 +93,39 @@ export async function toggleBloodRequestInterest(requestId: string) {
         message: "Interest removed successfully.",
       };
     }
-    // ---------------------------
-    // -->  ADD INTEREST
-    // ---------------------------
 
-    // Blood group compatibility
+    // A donor who is already assigned cannot show interest again.
+    const isAssigned = assignedDonors.some(
+      (assignment) => assignment.donor.toString() === userId,
+    );
 
+    if (isAssigned) {
+      return {
+        success: false,
+        message:
+          "You are already assigned to this request. Please cancel your assignment first.",
+      };
+    }
+
+    // -------------------------
+    // Add interest validations
+    // -------------------------
+
+    if (!isUserEligibleForAction(user)) {
+      return {
+        success: false,
+        message: "Please complete your profile before showing interest.",
+      };
+    }
+
+    if (!user.isAvailableForDonate) {
+      return {
+        success: false,
+        message: "You are currently unavailable for blood donation.",
+      };
+    }
+
+    // Blood group compatibility.
     if (!isBloodGroupCompatible(user.bloodGroup, request.bloodGroupNeeded)) {
       return {
         success: false,
@@ -127,7 +133,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
       };
     }
 
-    // Location is required
+    // Location is required for distance validation.
     if (!user.location?.coordinates || !request.location?.coordinates) {
       return {
         success: false,
@@ -135,7 +141,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
       };
     }
 
-    // Distance validation
+    // Donor must be within the service area.
     const distanceKm = getDistanceInKm(user.location, request.location);
 
     if (distanceKm === null || distanceKm > MAX_INTEREST_DISTANCE_KM) {
@@ -145,7 +151,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
       };
     }
 
-    // Add interest
+    // Add interest.
     await BloodRequest.updateOne(
       { _id: requestId },
       {

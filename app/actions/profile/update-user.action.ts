@@ -26,6 +26,7 @@ type UpdateUserData = Partial<
     | "height"
     | "weight"
     | "location"
+    | "isAvailableForDonate"
   >
 >;
 
@@ -72,6 +73,15 @@ export async function updateUserField(updates: UpdateUserData) {
         }
 
         updates.username = newUsername;
+      }
+    }
+
+    // Age changed → disable donor availability if user is under 18
+    if (updates.dateOfBirth) {
+      const isAdult = calculateAge(updates.dateOfBirth) >= 18;
+
+      if (!isAdult) {
+        updates.isAvailableForDonate = false;
       }
     }
 
