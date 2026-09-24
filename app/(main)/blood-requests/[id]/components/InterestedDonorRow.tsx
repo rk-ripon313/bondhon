@@ -3,10 +3,12 @@
 import { InfoIcon, MessageCircle, Phone, UserCheck, X } from "lucide-react";
 import Link from "next/link";
 
-import { toggleBloodRequestInterest } from "@/app/actions/blood-request/blood-request-donor.action";
+import {
+  assignBloodRequestDonor,
+  toggleBloodRequestInterest,
+} from "@/app/actions/blood-request/blood-request-donor.action";
 import { Button } from "@/components/ui/button";
 import { formatBDPhone } from "@/lib/helpers/phone";
-import { cn } from "@/lib/utils";
 import { BloodRequestDetailDonor } from "@/types/blood-request.type";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
@@ -17,7 +19,6 @@ interface InterestedDonorRowProps {
   donor: BloodRequestDetailDonor;
   isOwner: boolean;
   isCurrentUser: boolean;
-  isAssigned: boolean;
   requestId: string;
 }
 
@@ -25,7 +26,6 @@ export default function InterestedDonorRow({
   donor,
   isOwner,
   isCurrentUser,
-  isAssigned,
   requestId,
 }: InterestedDonorRowProps) {
   const router = useRouter();
@@ -34,6 +34,20 @@ export default function InterestedDonorRow({
   const handleRemoveInterest = () => {
     startTransition(async () => {
       const result = await toggleBloodRequestInterest(requestId);
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      router.refresh();
+    });
+  };
+
+  const handleAssign = () => {
+    startTransition(async () => {
+      const result = await assignBloodRequestDonor(requestId, donor.id);
 
       if (!result.success) {
         toast.error(result.message);
@@ -81,9 +95,15 @@ export default function InterestedDonorRow({
         {/* Contact Info */}
         {isOwner && (
           <div className="min-w-0 lg:w-[190px] lg:shrink-0">
-            <p className="truncate text-sm font-medium">
-              {formatBDPhone(donor.phone)}
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-app-primary/10 px-2 py-1 text-sm font-bold text-app-primary">
+                {donor.bloodGroup}
+              </span>
+
+              <p className="truncate text-sm font-medium ">
+                {formatBDPhone(donor.phone)}
+              </p>
+            </div>
 
             <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <InfoIcon className="size-3.5 shrink-0 text-amber-500" />
@@ -91,7 +111,6 @@ export default function InterestedDonorRow({
             </div>
           </div>
         )}
-
         {/* Actions */}
         <div className="flex items-center gap-2 lg:shrink-0">
           {/* Owner Actions */}
@@ -118,17 +137,13 @@ export default function InterestedDonorRow({
               {/* Assign Action */}
               <Button
                 type="button"
-                disabled={isAssigned}
-                variant={isAssigned ? "outline" : "default"}
-                className={cn(
-                  "h-9 w-[92px] shrink-0 gap-1.5 px-3 text-xs font-semibold shadow-none transition cursor-pointer",
-                  isAssigned
-                    ? "text-muted-foreground"
-                    : "bg-app-primary text-white hover:bg-app-primary/90",
-                )}
+                onClick={handleAssign}
+                disabled={isPending}
+                variant="default"
+                className="h-9 w-[92px] shrink-0 cursor-pointer gap-1.5 bg-app-primary px-3 text-xs font-semibold text-white shadow-none transition hover:bg-app-primary/90"
               >
                 <UserCheck className="size-3.5" />
-                {isAssigned ? "Assigned" : "Assign"}
+                {isPending ? "Assigning..." : "Assign"}
               </Button>
             </>
           )}
@@ -138,21 +153,12 @@ export default function InterestedDonorRow({
             <Button
               type="button"
               onClick={handleRemoveInterest}
-              disabled={isPending || isAssigned}
+              disabled={isPending}
               variant="outline"
-              className="h-9 w-[112px] shrink-0 gap-1.5 cursor-pointer border-app-primary/30 bg-app-primary/10 px-3 text-xs font-semibold text-app-primary transition hover:bg-app-primary/15 hover:text-app-primary"
+              className="h-9 w-[112px] shrink-0 cursor-pointer gap-1.5 border-app-primary/30 bg-app-primary/10 px-3 text-xs font-semibold text-app-primary transition hover:bg-app-primary/15 hover:text-app-primary"
             >
-              {isAssigned ? (
-                <>
-                  <UserCheck className="size-3.5" />
-                  Assigned
-                </>
-              ) : (
-                <>
-                  <X className="size-3.5" />
-                  {isPending ? "Removing..." : "Remove"}
-                </>
-              )}
+              <X className="size-3.5" />
+              {isPending ? "Removing..." : "Remove"}
             </Button>
           )}
 

@@ -9,8 +9,7 @@ export function InterestedDonorList({
 }: {
   bloodRequest: BloodRequestDetailData;
 }) {
-  const { interestedDonors, assignedDonors, currentUserId, isOwner, id } =
-    bloodRequest;
+  const { interestedDonors, currentUserId, isOwner, id } = bloodRequest;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-app-card">
@@ -46,24 +45,15 @@ export function InterestedDonorList({
         />
       ) : (
         <div className="max-h-[400px] divide-y divide-border overflow-y-auto custom-scrollbar">
-          {interestedDonors.map((donor) => {
-            const isCurrentUser = donor.id === currentUserId;
-
-            const isAssigned = assignedDonors.some(
-              (assignment) => assignment.donor.id === donor.id,
-            );
-
-            return (
-              <InterestedDonorRow
-                key={donor.id}
-                donor={donor}
-                isOwner={isOwner}
-                isCurrentUser={isCurrentUser}
-                isAssigned={isAssigned}
-                requestId={id}
-              />
-            );
-          })}
+          {interestedDonors.map((donor) => (
+            <InterestedDonorRow
+              key={donor.id}
+              donor={donor}
+              isOwner={isOwner}
+              isCurrentUser={donor.id === currentUserId}
+              requestId={id}
+            />
+          ))}
         </div>
       )}
     </section>
