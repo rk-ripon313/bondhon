@@ -310,3 +310,145 @@ export async function assignBloodRequestDonor(
     };
   }
 }
+
+/**
+ * Cancels an assigned donor from a blood request.
+ * Requesters can remove donors, while donors can cancel their own assignment.
+ */
+
+export async function cancelBloodRequestAssignment(
+  requestId: string,
+  donorId: string,
+) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user?.id) {
+      return {
+        success: false,
+        message: "You must be logged in to cancel this assignment.",
+      };
+    }
+
+    await dbConnect();
+
+    const request = await BloodRequest.findById(requestId)
+      .select("requester status interestedDonors assignedDonors")
+      .lean();
+
+    if (!request) {
+      return {
+        success: false,
+        message: "Blood request not found.",
+      };
+    }
+
+    if (request.status !== "active") {
+      return {
+        success: false,
+        message: "This blood request is no longer active.",
+      };
+    }
+
+    const userId = user.id;
+
+    const isOwner = request.requester.toString() === userId;
+    const isDonor = donorId === userId;
+
+    if (!isOwner && !isDonor) {
+      return {
+        success: false,
+        message: "You are not allowed to cancel this assignment.",
+      };
+    }
+
+    const assignedDonors = (request.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+      requesterConfirmedAt?: Date;
+      donorConfirmedAt?: Date;
+    }[];
+
+    const assignment = assignedDonors.find(
+      (assignment) => assignment.donor.toString() === donorId,
+    );
+
+    if (!assignment) {
+      return {
+        success: false,
+        message: "This donor is not assigned to this request.",
+      };
+    }
+
+    // A confirmed user cannot cancel their side of the assignment.
+    if (isOwner && assignment.requesterConfirmedAt) {
+      return {
+        success: false,
+        message:
+          "You cannot remove the assignment after confirming the donation.",
+      };
+    }
+
+    if (isDonor && assignment.donorConfirmedAt) {
+      return {
+        success: false,
+        message:
+          "You cannot cancel the assignment after confirming the donation.",
+      };
+    }
+
+    if (isOwner) {
+      // Requester removes the donor.
+      // The donor goes back to the interested list.
+      await BloodRequest.updateOne(
+        { _id: requestId },
+        {
+          $pull: {
+            assignedDonors: {
+              donor: donorId,
+            },
+          },
+          $addToSet: {
+            interestedDonors: donorId,
+          },
+        },
+      );
+
+      // TODO: Notify donor that the assignment was removed.
+    } else {
+      // Donor cancels their own assignment.
+      // The donor is also removed from the interested list.
+      await BloodRequest.updateOne(
+        { _id: requestId },
+        {
+          $pull: {
+            assignedDonors: {
+              donor: donorId,
+            },
+            interestedDonors: donorId,
+          },
+        },
+      );
+
+      // TODO: Notify requester that the donor cancelled the assignment.
+    }
+
+    revalidatePath("/");
+    revalidatePath("/profile");
+    revalidatePath("/blood-requests");
+    revalidatePath(`/blood-requests/${requestId}`);
+
+    return {
+      success: true,
+      message: isOwner
+        ? "Donor removed from the assignment."
+        : "Assignment cancelled successfully.",
+    };
+  } catch (error) {
+    console.error("Cancel Blood Request Assignment Error:", error);
+
+    return {
+      success: false,
+      message: "Unable to cancel the assignment right now.",
+    };
+  }
+}

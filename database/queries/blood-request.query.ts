@@ -107,7 +107,7 @@ export async function getBloodRequestById(
     })
     .populate({
       path: "assignedDonors.donor",
-      select: "name username image bloodGroup location",
+      select: "name username image bloodGroup phone  location",
     })
     .lean();
 
@@ -126,12 +126,8 @@ export async function getBloodRequestById(
   const assignedDonors = (
     bloodRequest.assignedDonors as PopulatedAssignment[]
   ).map((assignment) => ({
+    ...assignment,
     donor: replaceMongoIdInObject(assignment.donor)!,
-    assignedAt: assignment.assignedAt,
-    donationStatus: assignment.donationStatus,
-    donatedAt: assignment.donatedAt,
-    donorConfirmedAt: assignment.donorConfirmedAt,
-    requesterConfirmedAt: assignment.requesterConfirmedAt,
   })) as BloodRequestAssignment[];
 
   const isOwner = currentUserId ? requester.id === currentUserId : false;

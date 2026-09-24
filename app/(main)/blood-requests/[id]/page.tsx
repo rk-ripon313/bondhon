@@ -3,6 +3,7 @@ import { getBloodRequestById } from "@/database/queries/blood-request.query";
 import { notFound } from "next/navigation";
 import { BloodRequestDetailHeader } from "./components/BloodRequestDetailHeader";
 
+import AssignedDonorList from "./components/AssignedDonorList";
 import { BloodRequestHero } from "./components/BloodRequestHero";
 import { BloodRequestInfo } from "./components/BloodRequestInfo";
 import { BloodRequestRequester } from "./components/BloodRequestRequester";
@@ -45,6 +46,7 @@ export default async function BloodRequestDetailsPage({
           </div>
 
           <InterestedDonorList bloodRequest={bloodRequest} />
+          <AssignedDonorList bloodRequest={bloodRequest} />
         </div>
 
         {/* Keep requester and user actions sticky in the desktop sidebar */}
