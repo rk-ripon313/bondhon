@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { toggleBloodRequestInterest } from "@/app/actions/blood-request/blood-request-donor.action";
+import {
+  cancelBloodRequestAssignment,
+  toggleBloodRequestInterest,
+} from "@/app/actions/blood-request/blood-request-donor.action";
 import BloodRequestModal from "@/components/blood-request/BloodRequestModal";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -20,13 +24,14 @@ export function BloodRequestActions({
   const router = useRouter();
 
   const [openEdit, setOpenEdit] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const { isOwner, isAssigned, isInterested } = request;
 
   const handleUserAction = () => {
-    // TODO: Cancel assignment
     if (isAssigned) {
+      setCancelDialogOpen(true);
       return;
     }
 
@@ -40,6 +45,28 @@ export function BloodRequestActions({
         return;
       }
 
+      toast.success(result.message);
+      router.refresh();
+    });
+  };
+
+  const handleCancelAssignment = () => {
+    const currentUserId = request.currentUserId;
+
+    if (!currentUserId || isPending) return;
+
+    startTransition(async () => {
+      const result = await cancelBloodRequestAssignment(
+        request.id,
+        currentUserId,
+      );
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      setCancelDialogOpen(false);
       toast.success(result.message);
       router.refresh();
     });
@@ -78,57 +105,70 @@ export function BloodRequestActions({
 
   // Donor actions
   return (
-    <section className="rounded-2xl border border-border bg-app-card p-5 sm:p-6">
-      <h2 className="font-semibold">
-        {isAssigned ? "Donation Assignment" : "Want to help?"}
-      </h2>
+    <>
+      <section className="rounded-2xl border border-border bg-app-card p-5 sm:p-6">
+        <h2 className="font-semibold">
+          {isAssigned ? "Donation Assignment" : "Want to help?"}
+        </h2>
 
-      <p className="mt-1 text-sm leading-5 text-muted-foreground">
-        {isAssigned
-          ? "You are currently assigned to this blood request."
-          : "Let the requester know if you can donate."}
-      </p>
+        <p className="mt-1 text-sm leading-5 text-muted-foreground">
+          {isAssigned
+            ? "You are currently assigned to this blood request."
+            : "Let the requester know if you can donate."}
+        </p>
 
-      <Button
-        type="button"
-        onClick={handleUserAction}
-        disabled={isPending}
-        variant={isAssigned ? "outline" : "default"}
-        className={cn(
-          "mt-4 h-10 w-full cursor-pointer gap-2 font-semibold transition",
+        <Button
+          type="button"
+          onClick={handleUserAction}
+          disabled={isPending}
+          variant={isAssigned ? "outline" : "default"}
+          className={cn(
+            "mt-4 h-10 w-full cursor-pointer gap-2 font-semibold transition",
 
-          !isInterested &&
-            !isAssigned &&
-            "bg-app-primary text-white hover:bg-app-primary/90",
+            !isInterested &&
+              !isAssigned &&
+              "bg-app-primary text-white hover:bg-app-primary/90",
 
-          isInterested &&
-            !isAssigned &&
-            "border border-app-primary/40 bg-app-primary/10 text-app-primary hover:bg-app-primary/20",
+            isInterested &&
+              !isAssigned &&
+              "border border-app-primary/40 bg-app-primary/10 text-app-primary hover:bg-app-primary/20",
 
-          isAssigned &&
-            "border-destructive/30 text-destructive hover:bg-destructive/10",
+            isAssigned &&
+              "border-destructive/30 text-destructive hover:bg-destructive/10",
 
-          isPending && "cursor-wait",
-        )}
-      >
-        {isPending && <Spinner />}
+            isPending && "cursor-wait",
+          )}
+        >
+          {isPending && <Spinner />}
 
-        {isAssigned ? (
-          <>
-            <XCircle className="size-4" />
-            Cancel Assignment
-          </>
-        ) : (
-          <>
-            <Heart
-              className="size-4"
-              fill={isInterested ? "currentColor" : "none"}
-            />
+          {isAssigned ? (
+            <>
+              <XCircle className="size-4" />
+              Cancel Assignment
+            </>
+          ) : (
+            <>
+              <Heart
+                className="size-4"
+                fill={isInterested ? "currentColor" : "none"}
+              />
 
-            {isInterested ? "Not Interested" : "I'm Interested"}
-          </>
-        )}
-      </Button>
-    </section>
+              {isInterested ? "Not Interested" : "I'm Interested"}
+            </>
+          )}
+        </Button>
+      </section>
+
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title="Cancel assignment?"
+        description="You will no longer be assigned to this blood request. You will not be added back to the interested donors list."
+        confirmText="Cancel Assignment"
+        cancelText="Keep Assignment"
+        loading={isPending}
+        onConfirm={handleCancelAssignment}
+      />
+    </>
   );
 }

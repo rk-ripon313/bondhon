@@ -1,16 +1,22 @@
 import { Users } from "lucide-react";
 
 import EmptyState from "@/components/shared/EmptyState";
-import { BloodRequestDetailData } from "@/types/blood-request.type";
+import { BloodRequestDetailDonor } from "@/types/blood-request.type";
 import InterestedDonorRow from "./InterestedDonorRow";
 
-export function InterestedDonorList({
-  bloodRequest,
-}: {
-  bloodRequest: BloodRequestDetailData;
-}) {
-  const { interestedDonors, currentUserId, isOwner, id } = bloodRequest;
+interface InterestedDonorListProps {
+  interestedDonors: BloodRequestDetailDonor[];
+  currentUserId?: string;
+  isOwner: boolean;
+  requestId: string;
+}
 
+export function InterestedDonorList({
+  interestedDonors,
+  currentUserId,
+  isOwner,
+  requestId,
+}: InterestedDonorListProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-app-card">
       {/* Header */}
@@ -51,7 +57,7 @@ export function InterestedDonorList({
               donor={donor}
               isOwner={isOwner}
               isCurrentUser={donor.id === currentUserId}
-              requestId={id}
+              requestId={requestId}
             />
           ))}
         </div>

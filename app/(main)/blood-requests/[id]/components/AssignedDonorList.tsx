@@ -1,16 +1,22 @@
 import { UserCheck } from "lucide-react";
 
 import EmptyState from "@/components/shared/EmptyState";
-import { BloodRequestDetailData } from "@/types/blood-request.type";
+import { BloodRequestAssignment } from "@/types/blood-request.type";
 import AssignedDonorRow from "./AssignedDonorRow";
 
-export default function AssignedDonorList({
-  bloodRequest,
-}: {
-  bloodRequest: BloodRequestDetailData;
-}) {
-  const { assignedDonors, currentUserId, isOwner, id } = bloodRequest;
+interface AssignedDonorListProps {
+  assignedDonors: BloodRequestAssignment[];
+  currentUserId?: string;
+  isOwner: boolean;
+  requestId: string;
+}
 
+export default function AssignedDonorList({
+  assignedDonors,
+  currentUserId,
+  isOwner,
+  requestId,
+}: AssignedDonorListProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-app-card">
       {/* Header */}
@@ -51,7 +57,7 @@ export default function AssignedDonorList({
               assignment={assignment}
               isOwner={isOwner}
               isCurrentUser={assignment.donor.id === currentUserId}
-              requestId={id}
+              requestId={requestId}
             />
           ))}
         </div>

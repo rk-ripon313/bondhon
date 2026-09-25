@@ -45,8 +45,19 @@ export default async function BloodRequestDetailsPage({
             <BloodRequestActions request={request} />
           </div>
 
-          <InterestedDonorList bloodRequest={bloodRequest} />
-          <AssignedDonorList bloodRequest={bloodRequest} />
+          <InterestedDonorList
+            interestedDonors={interestedDonors}
+            currentUserId={request.currentUserId}
+            isOwner={request.isOwner}
+            requestId={request.id}
+          />
+
+          <AssignedDonorList
+            assignedDonors={assignedDonors}
+            currentUserId={request.currentUserId}
+            isOwner={request.isOwner}
+            requestId={request.id}
+          />
         </div>
 
         {/* Keep requester and user actions sticky in the desktop sidebar */}

@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, MessageCircle, Phone, UserRoundX } from "lucide-react";
+import {
+  BadgeCheck,
+  Check,
+  CheckCircle2,
+  Clock3,
+  MessageCircle,
+  Phone,
+  UserRoundX,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -76,6 +84,7 @@ export default function AssignedDonorRow({
           {/* Donor Info */}
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <DonorAvatar donor={donor} />
+
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="truncate text-sm font-medium">{donor.name}</p>
@@ -97,6 +106,30 @@ export default function AssignedDonorRow({
                     <span>•</span>
                     <span className="truncate">{donor.location.area}</span>
                   </>
+                )}
+
+                <span>•</span>
+
+                {assignment.donationStatus === "donated" ? (
+                  <span title="Donation completed">
+                    <BadgeCheck className="size-3.5 text-emerald-500" />
+                  </span>
+                ) : !isRequesterConfirmed && !isDonorConfirmed ? (
+                  <span title="Awaiting confirmation">
+                    <Clock3 className="size-3.5 text-amber-500" />
+                  </span>
+                ) : isRequesterConfirmed && isDonorConfirmed ? (
+                  <span title="Both requester and donor confirmed">
+                    <CheckCircle2 className="size-3.5 text-emerald-500" />
+                  </span>
+                ) : isDonorConfirmed ? (
+                  <span title="Donor confirmed">
+                    <CheckCircle2 className="size-3.5 text-blue-500" />
+                  </span>
+                ) : (
+                  <span title="Requester confirmed">
+                    <CheckCircle2 className="size-3.5 text-blue-500" />
+                  </span>
                 )}
               </div>
             </div>
