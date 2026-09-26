@@ -84,7 +84,8 @@ export async function updateUserDonationHistory(
     userId,
     {
       $set: {
-        lastDonationAt: donatedAt,
+        isAvailableForDonate: false,
+        lastDonationDate: donatedAt,
       },
       $inc: {
         totalDonations: 1,
