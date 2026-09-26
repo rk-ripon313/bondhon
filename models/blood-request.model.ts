@@ -48,7 +48,13 @@ const bloodRequestSchema = new Schema(
 
         donationStatus: {
           type: String,
-          enum: ["pending", "donated"],
+          enum: [
+            "pending",
+            "confirmed_by_donor",
+            "donated",
+            "canceled_by_donor",
+            "canceled_by_requester",
+          ],
           default: "pending",
         },
 
