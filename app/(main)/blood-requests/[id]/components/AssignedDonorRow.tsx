@@ -13,12 +13,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { BloodRequestAssignment } from "@/types/blood-request.type";
-
-import { cancelBloodRequestAssignment } from "@/app/actions/blood-request/blood-request-donor.action";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { toast } from "sonner";
+
+import {
+  cancelBloodRequestAssignment,
+  confirmBloodDonationByDonor,
+  confirmBloodDonationByRequester,
+} from "@/app/actions/blood-request/blood-request-donor.action";
+
 import DonorAvatar from "./DonorAvatar";
 
 interface AssignedDonorRowProps {
@@ -35,7 +40,12 @@ export default function AssignedDonorRow({
   requestId,
 }: AssignedDonorRowProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+
+  const [isCancelPending, startCancelTransition] = useTransition();
+  const [isDonorConfirmPending, startDonorConfirmTransition] = useTransition();
+  const [isRequesterConfirmPending, startRequesterConfirmTransition] =
+    useTransition();
+
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const { donor } = assignment;
@@ -44,7 +54,7 @@ export default function AssignedDonorRow({
   const isDonorConfirmed = Boolean(assignment.donorConfirmedAt);
 
   const handleCancelAssignment = () => {
-    startTransition(async () => {
+    startCancelTransition(async () => {
       const result = await cancelBloodRequestAssignment(requestId, donor.id);
 
       if (!result.success) {
@@ -53,27 +63,36 @@ export default function AssignedDonorRow({
       }
 
       setCancelDialogOpen(false);
+      toast.success(result.message);
       router.refresh();
     });
   };
 
-  const handleConfirmDonation = () => {
-    // TODO: Connect confirmBloodDonation action.
-    startTransition(async () => {
-      console.log("Confirm donation:", requestId, donor.id);
+  const handleConfirmDonationByDonor = () => {
+    startDonorConfirmTransition(async () => {
+      const result = await confirmBloodDonationByDonor(requestId);
 
-      // const result = await confirmBloodDonation(
-      //   requestId,
-      //   donor.id,
-      // );
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
 
-      // if (!result.success) {
-      //   toast.error(result.message);
-      //   return;
-      // }
+      toast.success(result.message);
+      router.refresh();
+    });
+  };
 
-      // toast.success(result.message);
-      // router.refresh();
+  const handleConfirmDonationByRequester = () => {
+    startRequesterConfirmTransition(async () => {
+      const result = await confirmBloodDonationByRequester(requestId, donor.id);
+
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(result.message);
+      router.refresh();
     });
   };
 
@@ -136,7 +155,7 @@ export default function AssignedDonorRow({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 ">
+          <div className="flex items-center gap-2">
             {/* Requester / Owner Actions */}
             {isOwner && (
               <>
@@ -165,7 +184,7 @@ export default function AssignedDonorRow({
                   <Button
                     type="button"
                     onClick={() => setCancelDialogOpen(true)}
-                    disabled={isPending}
+                    disabled={isCancelPending}
                     variant="outline"
                     title="Remove assigned donor"
                     aria-label="Remove assigned donor"
@@ -173,15 +192,15 @@ export default function AssignedDonorRow({
                   >
                     <UserRoundX className="size-3.5" />
 
-                    {isPending ? "Removing..." : "Remove"}
+                    {isCancelPending ? "Removing..." : "Remove"}
                   </Button>
                 )}
 
                 {/* Confirm Donation */}
                 <Button
                   type="button"
-                  onClick={handleConfirmDonation}
-                  disabled={isPending || isRequesterConfirmed}
+                  onClick={handleConfirmDonationByRequester}
+                  disabled={isRequesterConfirmPending || isRequesterConfirmed}
                   variant="outline"
                   title={
                     isRequesterConfirmed
@@ -201,7 +220,7 @@ export default function AssignedDonorRow({
                 >
                   <Check className="size-3.5 stroke-[3]" />
 
-                  {isPending
+                  {isRequesterConfirmPending
                     ? "Confirming..."
                     : isRequesterConfirmed
                       ? "Confirmed"
@@ -228,23 +247,23 @@ export default function AssignedDonorRow({
                   <Button
                     type="button"
                     onClick={() => setCancelDialogOpen(true)}
-                    disabled={isPending}
+                    disabled={isCancelPending}
                     variant="outline"
                     title="Cancel assignment"
                     aria-label="Cancel assignment"
-                    className=" h-9 w-[105px] shrink-0 cursor-pointer gap-1.5 border-app-primary/30 bg-app-primary/10 px-3 text-xs font-semibold text-app-primary transition hover:bg-app-primary/15 hover:text-app-primary sm:order-none"
+                    className="h-9 w-[105px] shrink-0 cursor-pointer gap-1.5 border-app-primary/30 bg-app-primary/10 px-3 text-xs font-semibold text-app-primary transition hover:bg-app-primary/15 hover:text-app-primary"
                   >
                     <UserRoundX className="size-3.5" />
 
-                    {isPending ? "Cancelling..." : "Cancel"}
+                    {isCancelPending ? "Cancelling..." : "Cancel"}
                   </Button>
                 )}
 
                 {/* Confirm Donation */}
                 <Button
                   type="button"
-                  onClick={handleConfirmDonation}
-                  disabled={isPending || isDonorConfirmed}
+                  onClick={handleConfirmDonationByDonor}
+                  disabled={isDonorConfirmPending || isDonorConfirmed}
                   variant="outline"
                   title={
                     isDonorConfirmed ? "Donation confirmed" : "Confirm donation"
@@ -260,7 +279,7 @@ export default function AssignedDonorRow({
                 >
                   <Check className="size-3.5 stroke-[3]" />
 
-                  {isPending
+                  {isDonorConfirmPending
                     ? "Confirming..."
                     : isDonorConfirmed
                       ? "Confirmed"
@@ -295,7 +314,7 @@ export default function AssignedDonorRow({
         }
         confirmText={isOwner ? "Remove Donor" : "Cancel Assignment"}
         cancelText="Keep Assignment"
-        loading={isPending}
+        loading={isCancelPending}
         onConfirm={handleCancelAssignment}
       />
     </>

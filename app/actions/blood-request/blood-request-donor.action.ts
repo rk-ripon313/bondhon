@@ -3,7 +3,10 @@
 import { Types } from "mongoose";
 import { revalidatePath } from "next/cache";
 
-import { getCurrentUser } from "@/database/queries/user.query";
+import {
+  getCurrentUser,
+  updateUserDonationHistory,
+} from "@/database/queries/user.query";
 import { isBloodGroupCompatible } from "@/lib/blood/blood-group";
 import { dbConnect } from "@/lib/db/db-connect";
 import { getDistanceInKm } from "@/lib/location/distance";
@@ -449,6 +452,212 @@ export async function cancelBloodRequestAssignment(
     return {
       success: false,
       message: "Unable to cancel the assignment right now.",
+    };
+  }
+}
+
+/**
+ * Confirms that an assigned donor has donated blood.
+ * The donor confirms their donation, allowing the requester
+ * to verify that the blood was received.
+ */
+
+export async function confirmBloodDonationByDonor(requestId: string) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+
+    await dbConnect();
+
+    const bloodRequest = await BloodRequest.findById(requestId);
+
+    if (!bloodRequest) {
+      return {
+        success: false,
+        error: "Blood request not found",
+      };
+    }
+
+    const assignedDonors = (bloodRequest.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+      donorConfirmedAt?: Date;
+      requesterConfirmedAt?: Date;
+    }[];
+
+    const assignment = assignedDonors.find(
+      (assignment) => assignment.donor.toString() === currentUser.id,
+    );
+
+    if (!assignment) {
+      return {
+        success: false,
+        error: "You are not an assigned donor for this request",
+      };
+    }
+
+    if (assignment.donorConfirmedAt) {
+      return {
+        success: false,
+        error: "You have already confirmed this donation",
+      };
+    }
+
+    assignment.donorConfirmedAt = new Date();
+
+    await bloodRequest.save();
+
+    // Notify requester to confirm the donation receipt.
+    if (!assignment.requesterConfirmedAt) {
+      // TODO: Create notification for requester
+    }
+
+    revalidatePath(`/blood-requests/${requestId}`);
+
+    return {
+      success: true,
+      message: "Donation confirmed successfully",
+    };
+  } catch (error) {
+    console.error("Error confirming donation by donor:", error);
+
+    return {
+      success: false,
+      error: "Failed to confirm donation",
+    };
+  }
+}
+
+/**
+ * Confirms that an assigned donor has donated blood.
+ * The requester can then verify that the blood was received.
+ */
+
+export async function confirmBloodDonationByRequester(
+  requestId: string,
+  donorId: string,
+) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+
+    await dbConnect();
+
+    const bloodRequest = await BloodRequest.findById(requestId);
+
+    if (!bloodRequest) {
+      return {
+        success: false,
+        error: "Blood request not found",
+      };
+    }
+
+    if (bloodRequest.status === "completed") {
+      return {
+        success: false,
+        error: "This blood request has already been completed",
+      };
+    }
+
+    const requesterId = bloodRequest.requester.toString();
+
+    if (requesterId !== currentUser.id) {
+      return {
+        success: false,
+        error: "You are not allowed to confirm this donation",
+      };
+    }
+
+    const assignedDonors = (bloodRequest.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+      donorConfirmedAt?: Date;
+      requesterConfirmedAt?: Date;
+      donationStatus?: string;
+      donatedAt?: Date;
+    }[];
+
+    const assignment = assignedDonors.find(
+      (item) => item.donor.toString() === donorId,
+    );
+
+    if (!assignment) {
+      return {
+        success: false,
+        error: "This donor is not assigned to the request",
+      };
+    }
+
+    if (assignment.requesterConfirmedAt) {
+      return {
+        success: false,
+        error: "You have already confirmed this donation",
+      };
+    }
+
+    const confirmedCount = assignedDonors.filter(
+      (item) => item.requesterConfirmedAt,
+    ).length;
+
+    if (confirmedCount >= bloodRequest.quantity) {
+      return {
+        success: false,
+        error: "The required blood quantity has already been fulfilled",
+      };
+    }
+
+    const now = new Date();
+
+    assignment.requesterConfirmedAt = now;
+    assignment.donationStatus = "donated";
+    assignment.donatedAt = now;
+
+    const newConfirmedCount = confirmedCount + 1;
+
+    if (newConfirmedCount >= bloodRequest.quantity) {
+      bloodRequest.status = "completed";
+    }
+
+    await bloodRequest.save();
+
+    const user = await updateUserDonationHistory(donorId, now);
+
+    // Notify donor based on their confirmation status
+    if (!assignment.donorConfirmedAt) {
+      // TODO: Notify donor that the requester confirmed receiving the donation
+    } else {
+      // TODO: Notify donor that the donation is fully confirmed
+    }
+
+    // TODO: Create completion notification if the request is completed
+
+    revalidatePath("/blood-requests");
+    revalidatePath(`/blood-requests/${requestId}`);
+    revalidatePath(`/user/${user.username}`);
+
+    return {
+      success: true,
+      message:
+        newConfirmedCount >= bloodRequest.quantity
+          ? "Donation confirmed and blood request completed"
+          : "Donation confirmed successfully",
+    };
+  } catch (error) {
+    console.error("Error confirming donation by requester:", error);
+
+    return {
+      success: false,
+      error: "Failed to confirm donation",
     };
   }
 }

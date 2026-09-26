@@ -71,3 +71,28 @@ export async function getCurrentUserConnections() {
     .populate("following", "name username image -_id")
     .lean();
 }
+
+/**
+ * Updates the user's donation history after a confirmed blood donation.
+ */
+
+export async function updateUserDonationHistory(
+  userId: string,
+  donatedAt: Date,
+) {
+  return User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        lastDonationAt: donatedAt,
+      },
+      $inc: {
+        totalDonations: 1,
+      },
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  ).lean();
+}
