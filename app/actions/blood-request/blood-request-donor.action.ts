@@ -382,20 +382,11 @@ export async function cancelBloodRequestAssignment(
       };
     }
 
-    // A confirmed user cannot cancel their side of the assignment.
-    if (isOwner && assignment.requesterConfirmedAt) {
+    // A confirmed assignment cannot be cancelled by either side.
+    if (assignment.requesterConfirmedAt || assignment.donorConfirmedAt) {
       return {
         success: false,
-        message:
-          "You cannot remove the assignment after confirming the donation.",
-      };
-    }
-
-    if (isDonor && assignment.donorConfirmedAt) {
-      return {
-        success: false,
-        message:
-          "You cannot cancel the assignment after confirming the donation.",
+        message: "You cannot cancel the assignment after confirmation.",
       };
     }
 
