@@ -35,8 +35,16 @@ const userSchema = new Schema(
     },
 
     isAvailableForDonate: { type: Boolean, default: false },
-    lastDonationDate: { type: Date },
-    totalDonations: { type: Number, default: 0 },
+    donationHistory: [
+      {
+        donatedAt: { type: Date, required: true },
+        bloodRequest: {
+          type: Schema.Types.ObjectId,
+          ref: "BloodRequest",
+          required: true,
+        },
+      },
+    ],
     badges: { type: [String], default: [] },
 
     followers: [{ type: Schema.Types.ObjectId, ref: "User" }],
