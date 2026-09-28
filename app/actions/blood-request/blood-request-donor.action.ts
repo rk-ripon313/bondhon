@@ -12,6 +12,7 @@ import { dbConnect } from "@/lib/db/db-connect";
 import { getDistanceInKm } from "@/lib/location/distance";
 import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
 import { BloodRequest } from "@/models/blood-request.model";
+import { User } from "@/models/user.model";
 
 const MAX_INTEREST_DISTANCE_KM = 50;
 
@@ -69,7 +70,20 @@ export async function toggleBloodRequestInterest(requestId: string) {
 
     const assignedDonors = (request.assignedDonors ?? []) as {
       donor: Types.ObjectId;
+      donationStatus: string;
     }[];
+
+    // A donor with an active assignment cannot toggle interest.
+    const isAssigned = assignedDonors.some(
+      (assignment) => assignment.donor.toString() === userId,
+    );
+
+    if (isAssigned) {
+      return {
+        success: false,
+        message: "You are already assigned to this request.",
+      };
+    }
 
     const isInterested = interestedDonors.some(
       (donorId) => donorId.toString() === userId,
@@ -94,19 +108,6 @@ export async function toggleBloodRequestInterest(requestId: string) {
       return {
         success: true,
         message: "Interest removed successfully.",
-      };
-    }
-
-    // A donor who is already assigned cannot show interest again.
-    const isAssigned = assignedDonors.some(
-      (assignment) => assignment.donor.toString() === userId,
-    );
-
-    if (isAssigned) {
-      return {
-        success: false,
-        message:
-          "You are already assigned to this request. Please cancel your assignment first.",
       };
     }
 
@@ -188,10 +189,10 @@ export async function toggleBloodRequestInterest(requestId: string) {
 /**
  * Assign an interested donor to a blood request.
  *
- * Validates requester ownership, donor interest, duplicate assignment,
- * and blood group compatibility before creating the assignment.
+ * A donor can only have one active blood donation assignment at a time.
+ * Once assigned to this request, the donor is removed from the
+ * interested donors list and the assignment is kept as history.
  */
-
 export async function assignBloodRequestDonor(
   requestId: string,
   donorId: string,
@@ -208,9 +209,11 @@ export async function assignBloodRequestDonor(
 
     await dbConnect();
 
-    const request = await BloodRequest.findById(requestId).select(
-      "requester status interestedDonors assignedDonors",
-    );
+    const request = await BloodRequest.findById(requestId)
+      .select(
+        "requester status quantity bloodGroupNeeded interestedDonors assignedDonors",
+      )
+      .lean();
 
     if (!request) {
       return {
@@ -237,7 +240,7 @@ export async function assignBloodRequestDonor(
       };
     }
 
-    // Only active requests can accept donor assignments.
+    // Only active requests can accept new assignments.
     if (request.status !== "active") {
       return {
         success: false,
@@ -245,14 +248,10 @@ export async function assignBloodRequestDonor(
       };
     }
 
+    //  Donor must be interested
     const interestedDonors = (request.interestedDonors ??
       []) as Types.ObjectId[];
 
-    const assignedDonors = (request.assignedDonors ?? []) as {
-      donor: Types.ObjectId;
-    }[];
-
-    // Donor must currently be interested.
     const isInterested = interestedDonors.some(
       (donor) => donor.toString() === donorId,
     );
@@ -264,7 +263,13 @@ export async function assignBloodRequestDonor(
       };
     }
 
-    // Prevent duplicate assignment.
+    // A donor who has already been assigned to this request
+    // cannot be assigned again.
+    const assignedDonors = (request.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+      donationStatus: string;
+    }[];
+
     const isAlreadyAssigned = assignedDonors.some(
       (assignment) => assignment.donor.toString() === donorId,
     );
@@ -272,17 +277,113 @@ export async function assignBloodRequestDonor(
     if (isAlreadyAssigned) {
       return {
         success: false,
-        message: "This donor is already assigned to the request.",
+        message: "This donor is already assigned to this request.",
       };
     }
 
-    await BloodRequest.updateOne(
-      { _id: requestId },
+    // Find the donor and check availability.
+    const donor = await User.findById(donorId)
+      .select("isAvailableForDonate bloodGroup")
+      .lean();
+
+    if (!donor || !donor.isAvailableForDonate) {
+      return {
+        success: false,
+        message: "Donor not found or currently unavailable for blood donation.",
+      };
+    }
+
+    // Check blood group compatibility.
+    if (!isBloodGroupCompatible(donor.bloodGroup, request.bloodGroupNeeded)) {
+      return {
+        success: false,
+        message:
+          "This donor's blood group is not compatible with this blood request.",
+      };
+    }
+    // ------------------------------
+    // CHECK PREVIOUS ASSIGNMENTS
+    // ------------------------------
+    const previousRequests = await BloodRequest.find({
+      _id: { $ne: requestId },
+      "assignedDonors.donor": donorId,
+    })
+      .select("assignedDonors")
+      .lean();
+
+    const UNRESOLVED_ASSIGNMENT_TIMEOUT_DAYS = 90;
+
+    let hasActiveAssignment = false;
+
+    for (const previousRequest of previousRequests) {
+      const assignments = previousRequest.assignedDonors ?? [];
+
+      for (const assignment of assignments) {
+        if (assignment.donor.toString() !== donorId) {
+          continue;
+        }
+
+        const donationStatus = assignment.donationStatus;
+
+        // Resolved assignments
+        if (
+          donationStatus === "canceled_by_donor" ||
+          donationStatus === "canceled_by_requester" ||
+          donationStatus === "donated"
+        ) {
+          continue;
+        }
+
+        // Unresolved assignments
+        if (
+          donationStatus === "pending" ||
+          donationStatus === "confirmed_by_donor"
+        ) {
+          // Unresolved assignments
+          const unresolvedSince =
+            assignment.donorConfirmedAt ?? assignment.assignedAt;
+
+          const staleDate = new Date(unresolvedSince);
+
+          staleDate.setDate(
+            staleDate.getDate() + UNRESOLVED_ASSIGNMENT_TIMEOUT_DAYS,
+          );
+
+          // Still inside the unresolved assignment window
+          if (new Date() < staleDate) {
+            hasActiveAssignment = true;
+            break;
+          }
+
+          // 90 days have passed.
+          // This unresolved assignment is stale,
+        }
+      }
+
+      if (hasActiveAssignment) {
+        break;
+      }
+    }
+
+    if (hasActiveAssignment) {
+      return {
+        success: false,
+        message: "This donor already has an active blood donation assignment.",
+      };
+    }
+
+    // Assign the donor.
+    const result = await BloodRequest.updateOne(
+      {
+        _id: requestId,
+        status: "active",
+        interestedDonors: donorId,
+        "assignedDonors.donor": { $ne: donorId },
+      },
       {
         $pull: {
           interestedDonors: donorId,
         },
-
         $push: {
           assignedDonors: {
             donor: donorId,
@@ -293,10 +394,15 @@ export async function assignBloodRequestDonor(
       },
     );
 
+    if (result.modifiedCount !== 1) {
+      return {
+        success: false,
+        message: "The donor could not be assigned.",
+      };
+    }
+
     // TODO: Notify the donor that they have been assigned.
 
-    revalidatePath("/");
-    revalidatePath("/profile");
     revalidatePath("/blood-requests");
     revalidatePath(`/blood-requests/${requestId}`);
 
@@ -316,7 +422,12 @@ export async function assignBloodRequestDonor(
 
 /**
  * Cancels an assigned donor from a blood request.
- * Requesters can remove donors, while donors can cancel their own assignment.
+ *
+ * Requesters can cancel an assigned donor,
+ * while donors can cancel their own assignment.
+ *
+ * The assignment is kept as history and only its
+ * donationStatus is updated.
  */
 
 export async function cancelBloodRequestAssignment(
@@ -336,20 +447,13 @@ export async function cancelBloodRequestAssignment(
     await dbConnect();
 
     const request = await BloodRequest.findById(requestId)
-      .select("requester status interestedDonors assignedDonors")
+      .select("requester assignedDonors")
       .lean();
 
     if (!request) {
       return {
         success: false,
         message: "Blood request not found.",
-      };
-    }
-
-    if (request.status !== "active") {
-      return {
-        success: false,
-        message: "This blood request is no longer active.",
       };
     }
 
@@ -367,8 +471,7 @@ export async function cancelBloodRequestAssignment(
 
     const assignedDonors = (request.assignedDonors ?? []) as {
       donor: Types.ObjectId;
-      requesterConfirmedAt?: Date;
-      donorConfirmedAt?: Date;
+      donationStatus: string;
     }[];
 
     const assignment = assignedDonors.find(
@@ -382,49 +485,39 @@ export async function cancelBloodRequestAssignment(
       };
     }
 
-    // A confirmed assignment cannot be cancelled by either side.
-    if (assignment.requesterConfirmedAt || assignment.donorConfirmedAt) {
+    // Only pending assignments can be cancelled.
+    if (assignment.donationStatus !== "pending") {
       return {
         success: false,
-        message: "You cannot cancel the assignment after confirmation.",
+        message: "You cannot cancel this assignment after confirmation.",
       };
     }
 
-    if (isOwner) {
-      // Requester removes the donor.
-      // The donor goes back to the interested list.
-      await BloodRequest.updateOne(
-        { _id: requestId },
-        {
-          $pull: {
-            assignedDonors: {
-              donor: donorId,
-            },
-          },
-          $addToSet: {
-            interestedDonors: donorId,
-          },
-        },
-      );
+    const donationStatus = isOwner
+      ? "canceled_by_requester"
+      : "canceled_by_donor";
 
-      // TODO: Notify donor that the assignment was removed.
-    } else {
-      // Donor cancels their own assignment.
-      // The donor is also removed from the interested list.
-      await BloodRequest.updateOne(
-        { _id: requestId },
-        {
-          $pull: {
-            assignedDonors: {
-              donor: donorId,
-            },
-            interestedDonors: donorId,
-          },
+    const result = await BloodRequest.updateOne(
+      {
+        _id: requestId,
+        "assignedDonors.donor": donorId,
+        "assignedDonors.donationStatus": "pending",
+      },
+      {
+        $set: {
+          "assignedDonors.$.donationStatus": donationStatus,
         },
-      );
+      },
+    );
 
-      // TODO: Notify requester that the donor cancelled the assignment.
+    if (result.modifiedCount !== 1) {
+      return {
+        success: false,
+        message: "The assignment could not be cancelled.",
+      };
     }
+
+    // TODO: Notify the donor/requester about the cancellation.
 
     revalidatePath("/");
     revalidatePath("/profile");
@@ -434,7 +527,7 @@ export async function cancelBloodRequestAssignment(
     return {
       success: true,
       message: isOwner
-        ? "Donor removed from the assignment."
+        ? "Donor assignment cancelled successfully."
         : "Assignment cancelled successfully.",
     };
   } catch (error) {
@@ -449,15 +542,17 @@ export async function cancelBloodRequestAssignment(
 
 /**
  * Confirms that an assigned donor has donated blood.
- * The donor confirms their donation, allowing the requester
- * to verify that the blood was received.
+ *
+ * The donor confirms their donation. If the requester has already
+ * confirmed, the donation becomes final and the donor's donation
+ * history is updated.
  */
 
 export async function confirmBloodDonationByDonor(requestId: string) {
   try {
     const currentUser = await getCurrentUser();
 
-    if (!currentUser) {
+    if (!currentUser?.id) {
       return {
         success: false,
         error: "Unauthorized",
@@ -477,8 +572,10 @@ export async function confirmBloodDonationByDonor(requestId: string) {
 
     const assignedDonors = (bloodRequest.assignedDonors ?? []) as {
       donor: Types.ObjectId;
+      donationStatus: string;
       donorConfirmedAt?: Date;
       requesterConfirmedAt?: Date;
+      donatedAt?: Date;
     }[];
 
     const assignment = assignedDonors.find(
@@ -492,6 +589,19 @@ export async function confirmBloodDonationByDonor(requestId: string) {
       };
     }
 
+    // Canceled or completed assignments cannot be confirmed again.
+    if (
+      assignment.donationStatus === "canceled_by_donor" ||
+      assignment.donationStatus === "canceled_by_requester" ||
+      assignment.donationStatus === "donated"
+    ) {
+      return {
+        success: false,
+        error: "This assignment can no longer be confirmed.",
+      };
+    }
+
+    // A donor can confirm their donation only once.
     if (assignment.donorConfirmedAt) {
       return {
         success: false,
@@ -499,20 +609,53 @@ export async function confirmBloodDonationByDonor(requestId: string) {
       };
     }
 
-    assignment.donorConfirmedAt = new Date();
+    const now = new Date();
 
-    await bloodRequest.save();
+    // Record when the donor confirmed the donation.
+    assignment.donorConfirmedAt = now;
 
-    // Notify requester to confirm the donation receipt.
-    if (!assignment.requesterConfirmedAt) {
-      // TODO: Create notification for requester
+    if (assignment.donationStatus === "confirmed_by_requester") {
+      // Both donor and requester have now confirmed the donation.
+      assignment.donationStatus = "donated";
+
+      // Use the earlier of the requester's confirmation and the deadline
+      // so a late requester confirmation does not artificially delay
+      // the donor's donation date and cooldown.
+      const donatedAt =
+        assignment.requesterConfirmedAt! <= bloodRequest.neededBefore
+          ? assignment.requesterConfirmedAt!
+          : bloodRequest.neededBefore;
+
+      assignment.donatedAt = donatedAt;
+
+      // Only fully confirmed donations count toward the required quantity.
+      const donatedCount = assignedDonors.filter(
+        (item) => item.donationStatus === "donated",
+      ).length;
+
+      if (donatedCount >= bloodRequest.quantity) {
+        bloodRequest.status = "completed";
+      }
+
+      await bloodRequest.save();
+
+      // Update donor history only after the donation becomes final.
+      await updateUserDonationHistory(currentUser.id, requestId, donatedAt);
+    } else {
+      // Only donor has confirmed so far.
+      assignment.donationStatus = "confirmed_by_donor";
+
+      await bloodRequest.save();
     }
 
+    // TODO: Notify requester to confirm the donation.
+
     revalidatePath(`/blood-requests/${requestId}`);
+    revalidatePath("/profile");
 
     return {
       success: true,
-      message: "Donation confirmed successfully",
+      message: "Donation confirmation submitted successfully.",
     };
   } catch (error) {
     console.error("Error confirming donation by donor:", error);
@@ -526,9 +669,11 @@ export async function confirmBloodDonationByDonor(requestId: string) {
 
 /**
  * Confirms that an assigned donor has donated blood.
- * The requester can then verify that the blood was received.
+ *
+ * The requester confirms the donation. If the donor has already
+ * confirmed, the assignment becomes final and the donor's donation
+ * history is updated.
  */
-
 export async function confirmBloodDonationByRequester(
   requestId: string,
   donorId: string,
@@ -536,7 +681,7 @@ export async function confirmBloodDonationByRequester(
   try {
     const currentUser = await getCurrentUser();
 
-    if (!currentUser) {
+    if (!currentUser?.id) {
       return {
         success: false,
         error: "Unauthorized",
@@ -554,16 +699,8 @@ export async function confirmBloodDonationByRequester(
       };
     }
 
-    if (bloodRequest.status === "completed") {
-      return {
-        success: false,
-        error: "This blood request has already been completed",
-      };
-    }
-
-    const requesterId = bloodRequest.requester.toString();
-
-    if (requesterId !== currentUser.id) {
+    // Only the requester can confirm a donor's donation.
+    if (bloodRequest.requester.toString() !== currentUser.id) {
       return {
         success: false,
         error: "You are not allowed to confirm this donation",
@@ -572,14 +709,14 @@ export async function confirmBloodDonationByRequester(
 
     const assignedDonors = (bloodRequest.assignedDonors ?? []) as {
       donor: Types.ObjectId;
+      donationStatus: string;
       donorConfirmedAt?: Date;
       requesterConfirmedAt?: Date;
-      donationStatus?: string;
       donatedAt?: Date;
     }[];
 
     const assignment = assignedDonors.find(
-      (item) => item.donor.toString() === donorId,
+      (assignment) => assignment.donor.toString() === donorId,
     );
 
     if (!assignment) {
@@ -589,6 +726,19 @@ export async function confirmBloodDonationByRequester(
       };
     }
 
+    // Canceled or completed assignments cannot be confirmed again.
+    if (
+      assignment.donationStatus === "canceled_by_donor" ||
+      assignment.donationStatus === "canceled_by_requester" ||
+      assignment.donationStatus === "donated"
+    ) {
+      return {
+        success: false,
+        error: "This assignment can no longer be confirmed.",
+      };
+    }
+
+    // The requester can confirm this donation only once.
     if (assignment.requesterConfirmedAt) {
       return {
         success: false,
@@ -596,52 +746,53 @@ export async function confirmBloodDonationByRequester(
       };
     }
 
-    const confirmedCount = assignedDonors.filter(
-      (item) => item.requesterConfirmedAt,
-    ).length;
-
-    if (confirmedCount >= bloodRequest.quantity) {
-      return {
-        success: false,
-        error: "The required blood quantity has already been fulfilled",
-      };
-    }
-
     const now = new Date();
 
+    // Record when the requester confirmed the donation.
     assignment.requesterConfirmedAt = now;
-    assignment.donationStatus = "donated";
-    assignment.donatedAt = now;
 
-    const newConfirmedCount = confirmedCount + 1;
+    if (assignment.donationStatus === "confirmed_by_donor") {
+      // Both donor and requester have now confirmed the donation.
+      assignment.donationStatus = "donated";
 
-    if (newConfirmedCount >= bloodRequest.quantity) {
-      bloodRequest.status = "completed";
-    }
+      // Use the earlier of the donor's confirmation and the deadline
+      // so a late confirmation does not artificially delay the
+      // donor's donation date and cooldown.
+      const donatedAt =
+        assignment.donorConfirmedAt! <= bloodRequest.neededBefore
+          ? assignment.donorConfirmedAt!
+          : bloodRequest.neededBefore;
 
-    await bloodRequest.save();
+      assignment.donatedAt = donatedAt;
 
-    const user = await updateUserDonationHistory(donorId, now);
+      // Only fully confirmed donations count toward the required quantity.
+      const donatedCount = assignedDonors.filter(
+        (item) => item.donationStatus === "donated",
+      ).length;
 
-    // Notify donor based on their confirmation status
-    if (!assignment.donorConfirmedAt) {
-      // TODO: Notify donor that the requester confirmed receiving the donation
+      if (donatedCount >= bloodRequest.quantity) {
+        bloodRequest.status = "completed";
+      }
+
+      await bloodRequest.save();
+
+      // Update donor history only after the donation becomes final.
+      await updateUserDonationHistory(donorId, requestId, donatedAt);
     } else {
-      // TODO: Notify donor that the donation is fully confirmed
+      // Only the requester has confirmed so far.
+      assignment.donationStatus = "confirmed_by_requester";
+
+      await bloodRequest.save();
     }
 
-    // TODO: Create completion notification if the request is completed
+    // TODO: Notify donor about the confirmation.
 
-    revalidatePath("/blood-requests");
     revalidatePath(`/blood-requests/${requestId}`);
-    revalidatePath(`/user/${user.username}`);
+    revalidatePath("/profile");
 
     return {
       success: true,
-      message:
-        newConfirmedCount >= bloodRequest.quantity
-          ? "Donation confirmed and blood request completed"
-          : "Donation confirmed successfully",
+      message: "Donation confirmation submitted successfully.",
     };
   } catch (error) {
     console.error("Error confirming donation by requester:", error);

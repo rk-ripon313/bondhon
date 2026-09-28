@@ -78,6 +78,7 @@ export async function getCurrentUserConnections() {
 
 export async function updateUserDonationHistory(
   userId: string,
+  requestId: string,
   donatedAt: Date,
 ) {
   return User.findByIdAndUpdate(
@@ -85,10 +86,12 @@ export async function updateUserDonationHistory(
     {
       $set: {
         isAvailableForDonate: false,
-        lastDonationDate: donatedAt,
       },
-      $inc: {
-        totalDonations: 1,
+      $push: {
+        donationHistory: {
+          donatedAt,
+          bloodRequest: requestId,
+        },
       },
     },
     {
