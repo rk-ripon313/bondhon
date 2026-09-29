@@ -48,15 +48,15 @@ export default async function BloodRequestDetailsPage({
             />
           </div>
 
-          <InterestedDonorList
-            interestedDonors={interestedDonors}
+          <AssignedDonorList
+            assignedDonors={assignedDonors}
             currentUserId={request.currentUserId}
             isOwner={request.isOwner}
             requestId={request.id}
           />
 
-          <AssignedDonorList
-            assignedDonors={assignedDonors}
+          <InterestedDonorList
+            interestedDonors={interestedDonors}
             currentUserId={request.currentUserId}
             isOwner={request.isOwner}
             requestId={request.id}
