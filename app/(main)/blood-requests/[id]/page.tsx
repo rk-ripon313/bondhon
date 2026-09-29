@@ -42,7 +42,10 @@ export default async function BloodRequestDetailsPage({
               contactNumber={request.contactNumber}
             />
 
-            <BloodRequestActions request={request} />
+            <BloodRequestActions
+              request={request}
+              assignedDonors={assignedDonors}
+            />
           </div>
 
           <InterestedDonorList
@@ -68,7 +71,10 @@ export default async function BloodRequestDetailsPage({
               contactNumber={request.contactNumber}
             />
 
-            <BloodRequestActions request={request} />
+            <BloodRequestActions
+              request={request}
+              assignedDonors={assignedDonors}
+            />
           </div>
         </aside>
       </div>

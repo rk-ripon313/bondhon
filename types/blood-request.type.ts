@@ -53,7 +53,15 @@ export interface BloodRequestAssignment {
   donor: BloodRequestDetailDonor;
 
   assignedAt: Date | string;
-  donationStatus: "pending" | "donated";
+
+  donationStatus:
+    | "pending"
+    | "confirmed_by_donor"
+    | "confirmed_by_requester"
+    | "donated"
+    | "canceled_by_donor"
+    | "canceled_by_requester";
+
   donatedAt?: Date | string;
   donorConfirmedAt?: Date | string;
   requesterConfirmedAt?: Date | string;
