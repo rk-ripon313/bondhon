@@ -57,13 +57,14 @@ export default function BloodRequestCardFooter({
               !isAssigned &&
               "border border-app-primary/40 bg-app-primary/10 text-app-primary hover:bg-app-primary/20",
 
-            isAssigned && "cursor-not-allowed",
+            isAssigned &&
+              "cursor-default border-emerald-500/30 bg-emerald-500/10 text-emerald-600 opacity-100 hover:bg-emerald-500/10 dark:text-emerald-400",
 
             isOwner && "cursor-not-allowed opacity-40",
           )}
         >
           {isAssigned ? (
-            "I Can't Donate"
+            "Assigned"
           ) : (
             <>
               <Heart

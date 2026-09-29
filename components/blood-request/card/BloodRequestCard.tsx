@@ -1,9 +1,10 @@
 "use client";
 
-import { Building2, MapPin } from "lucide-react";
+import { Building2, Clock3, MapPin } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDateTime, getTimeAgo } from "@/lib/helpers/date";
+import { formatLocation } from "@/lib/helpers/location-format";
 import { getStatusStyles } from "@/lib/helpers/status";
 import { BloodRequestCardData } from "@/types/blood-request.type";
 import Link from "next/link";
@@ -28,10 +29,7 @@ export default function BloodRequestCard({
 }) {
   const requesterName = request.requester?.name || "Unknown User";
   const statusStyles = getStatusStyles(request.status);
-
-  const locationText = [request.location?.area, request.location?.district]
-    .filter(Boolean)
-    .join(", ");
+  const locationText = formatLocation(request.location);
 
   return (
     <article className="group overflow-hidden rounded-2xl border border-border/60 bg-app-card shadow-sm transition-shadow hover:shadow-md">
@@ -74,6 +72,7 @@ export default function BloodRequestCard({
 
             <span className="hidden sm:inline">{statusStyles.label}</span>
           </div>
+
           {/* Actions dropdown */}
           <BloodRequestActions request={request} />
         </div>
@@ -104,20 +103,6 @@ export default function BloodRequestCard({
             {/* Divider */}
             <div className="hidden h-10 w-px shrink-0 bg-border/70 sm:mx-4 sm:block" />
 
-            {/* Needed Before */}
-            <div className="min-w-0">
-              <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
-                Needed Before
-              </p>
-
-              <p className="mt-0.5 truncate text-xs font-semibold text-app-foreground sm:text-sm">
-                {formatDateTime(request.neededBefore)}
-              </p>
-            </div>
-
-            {/* Mobile Divider */}
-            <div className="col-span-2 h-px w-full bg-border/70 sm:hidden" />
-
             {/* Urgency */}
             <div className="col-span-2 flex items-center justify-between sm:ml-auto sm:w-[72px] sm:shrink-0 sm:flex-col sm:items-end">
               <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
@@ -135,8 +120,39 @@ export default function BloodRequestCard({
           </div>
         </div>
 
-        {/* Hospital & Location */}
+        {/* Needed Before Hospital & Location */}
         <div className="mt-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60">
+              <Clock3 className="h-4 w-4 shrink-0 text-primary/70" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Needed Before
+              </p>
+              <p className="mt-0.5 truncate text-sm font-medium text-app-foreground">
+                {formatDateTime(request.neededBefore)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60">
+              <MapPin className="h-4 w-4 shrink-0 text-primary/70" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Location
+              </p>
+
+              <p className="mt-0.5 truncate text-sm font-medium text-app-foreground">
+                {locationText}
+              </p>
+            </div>
+          </div>
+
           {request.hospitalName && (
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60">
@@ -154,32 +170,7 @@ export default function BloodRequestCard({
               </div>
             </div>
           )}
-
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60">
-              <MapPin className="h-4 w-4 shrink-0 text-primary/70" />
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Location
-              </p>
-
-              <p className="mt-0.5 truncate text-sm font-medium text-app-foreground">
-                {locationText}
-              </p>
-            </div>
-          </div>
         </div>
-
-        {/* Additional Notes */}
-        {request.additionalNotes && (
-          <div className="mt-4 border-l-2 border-app-secondary/50 pl-3">
-            <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-              {request.additionalNotes}
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Footer */}
