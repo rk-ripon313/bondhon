@@ -189,8 +189,10 @@ export async function updateDonorAvailability(isAvailableForDonate: boolean) {
         };
       }
 
-      const hasRecentDonation = user.lastDonationDate
-        ? Date.now() - new Date(user.lastDonationDate).getTime() <
+      const lastDonation = user.donationHistory?.at(-1);
+
+      const hasRecentDonation = lastDonation
+        ? Date.now() - new Date(lastDonation.donatedAt).getTime() <
           90 * 24 * 60 * 60 * 1000
         : false;
 
