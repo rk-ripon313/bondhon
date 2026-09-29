@@ -39,7 +39,7 @@ export default function ProfileHero({ user }: { user: UserProfile }) {
       <ProfileStats
         followersCount={user.followers?.length ?? 0}
         followingCount={user.following?.length ?? 0}
-        donationsCount={user.totalDonations ?? 0}
+        donationsCount={user.donationHistory?.length ?? 0}
       />
 
       {/* Profile completion */}

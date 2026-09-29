@@ -37,8 +37,11 @@ export interface UserProfile {
   blockedUsers?: string[];
 
   isAvailableForDonate?: boolean;
-  lastDonationDate?: Date | string;
-  totalDonations?: number;
+
+  donationHistory?: {
+    donatedAt: Date | string;
+    bloodRequest: string;
+  }[];
 
   badges?: string[];
 

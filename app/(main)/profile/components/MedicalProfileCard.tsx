@@ -13,6 +13,8 @@ import {
 import ProfileCardHeader from "./ProfileCardHeader";
 
 export default function MedicalProfileCard({ user }: { user: UserProfile }) {
+  const totalDonation = user.donationHistory?.length ?? 0;
+
   return (
     <Card className="border-border/60 bg-app-card shadow-sm">
       <ProfileCardHeader
@@ -60,7 +62,7 @@ export default function MedicalProfileCard({ user }: { user: UserProfile }) {
             <p className="text-xs text-muted-foreground">Total Donated</p>
 
             <p className="mt-1 text-sm font-semibold text-foreground">
-              {user.totalDonations ?? 0} times
+              {totalDonation} times
             </p>
           </div>
 
@@ -68,8 +70,8 @@ export default function MedicalProfileCard({ user }: { user: UserProfile }) {
             <p className="text-xs text-muted-foreground">Last Donation</p>
 
             <p className="mt-1 text-xs font-semibold text-foreground">
-              {user.lastDonationDate
-                ? formatDate(user.lastDonationDate)
+              {totalDonation
+                ? formatDate(user.donationHistory![totalDonation - 1].donatedAt)
                 : "Never"}
             </p>
           </div>
