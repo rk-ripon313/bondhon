@@ -18,6 +18,7 @@ import {
 
 import { updateUserField } from "@/app/actions/profile/update-user.action";
 import { BLOOD_GROUPS } from "@/constants";
+import { formatDate } from "@/lib/helpers/date";
 import {
   updateMedicalSchema,
   type UpdateMedicalInput,
@@ -30,6 +31,8 @@ interface MedicalTabProps {
 }
 
 export default function MedicalTab({ user, onSuccess }: MedicalTabProps) {
+  const totalDonation = user.donationHistory?.length ?? 0;
+
   const {
     register,
     control,
@@ -199,21 +202,15 @@ export default function MedicalTab({ user, onSuccess }: MedicalTabProps) {
           <div className="rounded-xl border border-border/50 bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">Total Donations</p>
 
-            <p className="mt-1 text-sm font-semibold">
-              {user.totalDonations ?? 0} times
-            </p>
+            <p className="mt-1 text-sm font-semibold">{totalDonation} times</p>
           </div>
 
           <div className="rounded-xl border border-border/50 bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">Last Donation</p>
 
             <p className="mt-1 text-sm font-semibold">
-              {user.lastDonationDate
-                ? new Date(user.lastDonationDate).toLocaleDateString("en-BD", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
+              {totalDonation
+                ? formatDate(user.donationHistory![totalDonation - 1].donatedAt)
                 : "Never"}
             </p>
           </div>
