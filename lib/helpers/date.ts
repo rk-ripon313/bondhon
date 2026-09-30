@@ -42,15 +42,18 @@ export const formatDate = (date?: Date | string) => {
  * @returns {string} The formatted date and time string in the format "day month, hour:minute AM/PM" (e.g., "1 January, 10:30 AM").
  */
 
-export const formatDateTime = (date: Date | string) => {
+export const formatDateTime = (
+  date: Date | string,
+  timeZone = getUserTimezone(),
+) => {
   return new Date(date).toLocaleString("en-BD", {
+    timeZone,
     day: "numeric",
     month: "short",
     hour: "numeric",
     minute: "2-digit",
   });
 };
-
 /**
  * Returns a human-readable string representing the time elapsed since the given date.
  * @param {Date | string} date - The date to calculate the time ago from, either as a Date object or a string.

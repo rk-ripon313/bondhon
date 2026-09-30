@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 
 export default async function BloodRequestsPage() {
   const requests = await getBloodRequests();
-
   return (
     <div className="min-h-screen w-full bg-app-background px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
