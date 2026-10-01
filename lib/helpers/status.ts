@@ -8,12 +8,12 @@ export const getStatusStyles = (status: string) => {
         badge: "border-emerald-500/20 bg-emerald-500/10",
       };
 
-    case "assigned":
+    case "expired":
       return {
-        label: "Assigned",
-        dot: "bg-blue-500",
-        text: "text-blue-500",
-        badge: "border-blue-500/20 bg-blue-500/10",
+        label: "Expired",
+        dot: "bg-slate-400",
+        text: "text-slate-500 dark:text-slate-400",
+        badge: "border-slate-500/20 bg-slate-500/10",
       };
 
     case "completed":

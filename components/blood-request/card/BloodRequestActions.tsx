@@ -33,7 +33,10 @@ export default function BloodRequestActions({
 }) {
   const { refresh } = useRouter();
   const requesterName = request.requester?.name || "Unknown User";
-  const canEditOrDelete = request.isOwner && request.status === "active";
+
+  const isExpired = new Date(request.neededBefore) <= new Date();
+  const canEditOrDelete =
+    request.isOwner && request.status === "active" && !isExpired;
 
   const [openEdit, setOpenEdit] = useState(false);
 

@@ -5,22 +5,11 @@ import { Building2, Clock3, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDateTime, getTimeAgo } from "@/lib/helpers/date";
 import { formatLocation } from "@/lib/helpers/location-format";
-import { getStatusStyles } from "@/lib/helpers/status";
+import { getStatusStyles, getUrgencyStyles } from "@/lib/helpers/status";
 import { BloodRequestCardData } from "@/types/blood-request.type";
 import Link from "next/link";
 import BloodRequestActions from "./BloodRequestActions";
 import BloodRequestCardFooter from "./BloodRequestCardFooter";
-
-function getUrgencyClass(urgency: string) {
-  switch (urgency) {
-    case "critical":
-      return "text-red-500";
-    case "urgent":
-      return "text-orange-500";
-    default:
-      return "text-app-secondary";
-  }
-}
 
 export default function BloodRequestCard({
   request,
@@ -28,7 +17,14 @@ export default function BloodRequestCard({
   request: BloodRequestCardData;
 }) {
   const requesterName = request.requester?.name || "Unknown User";
-  const statusStyles = getStatusStyles(request.status);
+
+  const effectiveStatus =
+    new Date(request.neededBefore) <= new Date() ? "expired" : request.status;
+
+  const statusStyles = getStatusStyles(effectiveStatus);
+
+  const urgencyStyles = getUrgencyStyles(request.urgency);
+
   const locationText = formatLocation(request.location);
 
   return (
@@ -66,7 +62,7 @@ export default function BloodRequestCard({
             title={`Status: ${statusStyles.label}`}
           >
             <span
-              className={`size-1.5 rounded-full animate-pulse ${statusStyles.dot}`}
+              className={`size-1.5 rounded-full ${statusStyles.dot}`}
               aria-hidden="true"
             />
 
@@ -82,9 +78,9 @@ export default function BloodRequestCard({
       <div className="px-5 pb-5 pt-5 sm:px-6 sm:pb-6">
         {/* Request Details */}
         <div className="rounded-xl border border-border/50 bg-muted/20 px-3 py-3 sm:px-4 sm:py-3.5">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-3 md:flex md:items-center md:gap-0">
+          <div className="flex items-center gap-3 sm:gap-4">
             {/* Blood */}
-            <div className="flex min-w-0 items-center gap-2.5 sm:flex-[1.15] sm:gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-app-primary/10 text-base font-bold text-app-primary ring-1 ring-app-primary/15 sm:size-12 sm:rounded-xl sm:text-xl">
                 {request.bloodGroupNeeded}
               </div>
@@ -101,25 +97,23 @@ export default function BloodRequestCard({
             </div>
 
             {/* Divider */}
-            <div className="hidden h-10 w-px shrink-0 bg-border/70 sm:mx-4 sm:block" />
+            <div className="h-10 w-px shrink-0 bg-border/70" />
 
             {/* Urgency */}
-            <div className="col-span-2 flex items-center justify-between sm:ml-auto sm:w-[72px] sm:shrink-0 sm:flex-col sm:items-end">
+            {/* Urgency */}
+            <div className="shrink-0 text-right">
               <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
                 Urgency
               </p>
 
               <p
-                className={`text-[10px] font-bold uppercase tracking-wide sm:mt-0.5 sm:text-xs ${getUrgencyClass(
-                  request.urgency,
-                )}`}
+                className={`mt-0.5 text-[10px] font-bold uppercase tracking-wide sm:text-xs ${urgencyStyles.text}`}
               >
-                {request.urgency}
+                {urgencyStyles.label}
               </p>
             </div>
           </div>
         </div>
-
         {/* Needed Before Hospital & Location */}
         <div className="mt-4 space-y-3">
           <div className="flex items-start gap-3">

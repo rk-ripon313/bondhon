@@ -10,7 +10,10 @@ export function BloodRequestHero({
 }: {
   request: BloodRequestCardData;
 }) {
-  const statusStyles = getStatusStyles(request.status);
+  const effectiveStatus =
+    new Date(request.neededBefore) <= new Date() ? "expired" : request.status;
+
+  const statusStyles = getStatusStyles(effectiveStatus);
   const urgencyStyles = getUrgencyStyles(request.urgency);
 
   return (
@@ -37,9 +40,9 @@ export function BloodRequestHero({
               </span>
 
               <span
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${urgencyStyles}`}
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium ${urgencyStyles.badge} ${urgencyStyles.text}`}
               >
-                {request.urgency}
+                {urgencyStyles.label}
               </span>
 
               {request.assignedCount > 0 && (
