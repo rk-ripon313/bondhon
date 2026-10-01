@@ -130,15 +130,18 @@ export async function updateBloodRequest(
       };
     }
 
-    const donatedCount =
-      ((request.assignedDonors ?? []) as { donationStatus: string }[]).filter(
-        (assignment) => assignment.donationStatus === "donated",
-      ).length ?? 0;
+    const confirmedDonationCount = (
+      (request.assignedDonors ?? []) as { donationStatus: string }[]
+    ).filter(
+      (assignment) =>
+        assignment.donationStatus === "confirmed_by_requester" ||
+        assignment.donationStatus === "donated",
+    ).length;
 
-    if (validation.data.quantity < donatedCount) {
+    if (validation.data.quantity < confirmedDonationCount) {
       return {
         success: false,
-        message: `Quantity cannot be less than the number of completed donations (${donatedCount}).`,
+        message: `Quantity cannot be less than the number of completed donations (${confirmedDonationCount}).`,
       };
     }
 

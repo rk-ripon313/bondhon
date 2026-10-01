@@ -51,7 +51,7 @@ const bloodRequestSchema = new Schema(
           enum: [
             "pending",
             "confirmed_by_donor",
-            "canceled_by_requester",
+            "confirmed_by_requester",
             "donated",
             "canceled_by_donor",
             "canceled_by_requester",
