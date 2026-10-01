@@ -138,7 +138,7 @@ export async function updateBloodRequest(
         assignment.donationStatus === "donated",
     ).length;
 
-    if (validation.data.quantity < confirmedDonationCount) {
+    if (validation.data.quantity <= confirmedDonationCount) {
       return {
         success: false,
         message: `Quantity cannot be less than the number of completed donations (${confirmedDonationCount}).`,

@@ -37,7 +37,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
     await dbConnect();
 
     const request = await BloodRequest.findById(requestId).select(
-      "requester bloodGroupNeeded status location interestedDonors assignedDonors",
+      "requester bloodGroupNeeded status neededBefore location interestedDonors assignedDonors",
     );
 
     if (!request) {
@@ -58,7 +58,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
     }
 
     // Only active requests can be modified.
-    if (request.status !== "active") {
+    if (request.status !== "active" || request.neededBefore <= new Date()) {
       return {
         success: false,
         message: "This blood request is no longer accepting interest.",
@@ -211,7 +211,7 @@ export async function assignBloodRequestDonor(
 
     const request = await BloodRequest.findById(requestId)
       .select(
-        "requester status quantity bloodGroupNeeded interestedDonors assignedDonors",
+        "requester status neededBefore quantity bloodGroupNeeded interestedDonors assignedDonors",
       )
       .lean();
 
@@ -241,10 +241,10 @@ export async function assignBloodRequestDonor(
     }
 
     // Only active requests can accept new assignments.
-    if (request.status !== "active") {
+    if (request.status !== "active" || request.neededBefore <= new Date()) {
       return {
         success: false,
-        message: "This blood request is no longer active.",
+        message: "This blood request is no longer accepting donors.",
       };
     }
 
@@ -278,6 +278,21 @@ export async function assignBloodRequestDonor(
       return {
         success: false,
         message: "This donor is already assigned to this request.",
+      };
+    }
+
+    const confirmedDonationCount = assignedDonors.filter(
+      (assignment) =>
+        assignment.donationStatus === "confirmed_by_requester" ||
+        assignment.donationStatus === "donated",
+    ).length;
+
+    // If the number of confirmed donations is already equal to or greater than the requested quantity, no more donors can be assigned.
+    if (confirmedDonationCount >= request.quantity) {
+      return {
+        success: false,
+        message:
+          "This blood request has already received the required amount of blood.",
       };
     }
 
@@ -315,6 +330,7 @@ export async function assignBloodRequestDonor(
 
     let hasActiveAssignment = false;
 
+    //loop through previous requests to check if the donor has any unresolved assignments
     for (const previousRequest of previousRequests) {
       const assignments = previousRequest.assignedDonors ?? [];
 
