@@ -17,10 +17,7 @@ import { revalidatePath } from "next/cache";
  * @returns {Promise<{ success: boolean; message: string }>} - An object indicating the success status and a message.
  */
 
-export async function createBloodRequest(
-  data: BloodRequestFormInput,
-  timeZone: string,
-) {
+export async function createBloodRequest(data: BloodRequestFormInput) {
   try {
     const validation = bloodRequestSchema.safeParse(data);
 
@@ -43,10 +40,7 @@ export async function createBloodRequest(
 
     await dbConnect();
 
-    const neededBefore = localDateTimeToUTC(
-      validation.data.neededBefore,
-      timeZone,
-    );
+    const neededBefore = localDateTimeToUTC(validation.data.neededBefore);
 
     await BloodRequest.create({
       ...validation.data,
@@ -80,7 +74,6 @@ export async function createBloodRequest(
 export async function updateBloodRequest(
   requestId: string,
   data: BloodRequestFormInput,
-  timeZone: string,
 ) {
   try {
     const validation = bloodRequestSchema.safeParse(data);
@@ -128,10 +121,7 @@ export async function updateBloodRequest(
       };
     }
 
-    const neededBefore = localDateTimeToUTC(
-      validation.data.neededBefore,
-      timeZone,
-    );
+    const neededBefore = localDateTimeToUTC(validation.data.neededBefore);
 
     await BloodRequest.updateOne(
       { _id: requestId },
