@@ -9,6 +9,7 @@ import {
   bloodRequestSchema,
 } from "@/lib/validations/blood-request/blood-request.schema";
 import { BloodRequest } from "@/models/blood-request.model";
+import { Types } from "mongoose";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -92,7 +93,11 @@ export async function updateBloodRequest(
     const request = await BloodRequest.findOne({
       _id: requestId,
       requester: user.id,
-    });
+    })
+      .select(
+        "status bloodGroupNeeded neededBefore interestedDonors assignedDonors",
+      )
+      .lean();
 
     if (!request) {
       return {
@@ -107,6 +112,7 @@ export async function updateBloodRequest(
         message: "Only active blood requests can be edited.",
       };
     }
+
     if (request.neededBefore <= new Date()) {
       return {
         success: false,
@@ -114,16 +120,26 @@ export async function updateBloodRequest(
       };
     }
 
-    if (request.assignedDonors.length > 0) {
+    // Blood group cannot be changed after the request is created.
+    if (validation.data.bloodGroupNeeded !== request.bloodGroupNeeded) {
       return {
         success: false,
-        message: "A donor has already been assigned to this request.",
+        message: "Blood group cannot be changed after creating a request.",
       };
     }
 
+    // Keep the existing donor IDs before updating the request.
+
+    const interestedDonorIds = (request.interestedDonors ??
+      []) as Types.ObjectId[];
+
+    const assignedDonorIds = (
+      (request.assignedDonors ?? []) as { donor: Types.ObjectId }[]
+    ).map((assignment) => assignment.donor);
+
     const neededBefore = localDateTimeToUTC(validation.data.neededBefore);
 
-    await BloodRequest.updateOne(
+    const updateResult = await BloodRequest.updateOne(
       { _id: requestId },
       {
         $set: {
@@ -132,6 +148,23 @@ export async function updateBloodRequest(
         },
       },
     );
+
+    if (updateResult.matchedCount === 0) {
+      return {
+        success: false,
+        message: "Failed to update the blood request.",
+      };
+    }
+
+    // Notify interested donors
+    if (interestedDonorIds.length > 0) {
+      // TODO: notify interested donors
+    }
+
+    // Notify assigned donors
+    if (assignedDonorIds.length > 0) {
+      // TODO: notify assigned donors
+    }
 
     revalidatePath("/");
     revalidatePath("/profile");
