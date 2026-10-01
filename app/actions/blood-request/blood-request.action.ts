@@ -49,6 +49,8 @@ export async function createBloodRequest(data: BloodRequestFormInput) {
       neededBefore,
     });
 
+    // TODO: Notify nearby eligible donors
+
     revalidatePath("/");
     revalidatePath("/profile");
     revalidatePath("/blood-requests");
@@ -125,6 +127,18 @@ export async function updateBloodRequest(
       return {
         success: false,
         message: "Blood group cannot be changed after creating a request.",
+      };
+    }
+
+    const donatedCount =
+      ((request.assignedDonors ?? []) as { donationStatus: string }[]).filter(
+        (assignment) => assignment.donationStatus === "donated",
+      ).length ?? 0;
+
+    if (validation.data.quantity < donatedCount) {
+      return {
+        success: false,
+        message: `Quantity cannot be less than the number of completed donations (${donatedCount}).`,
       };
     }
 
