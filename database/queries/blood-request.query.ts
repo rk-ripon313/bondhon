@@ -14,6 +14,13 @@ import {
 import { LocationData } from "@/types/location.type";
 import { Types } from "mongoose";
 
+/**
+ * Fetches blood requests based on the provided parameters, including search, blood group, status, urgency, sorting, location, and pagination. Returns the filtered blood requests along with total count and total pages.
+ *
+ * @param {GetBloodRequestsParams} params - The parameters for filtering and sorting blood requests.
+ * @returns {Promise<{ requests: BloodRequestCardData[]; totalCount: number; totalPages: number }>} A promise that resolves to an object containing the filtered blood requests, total count, and total pages.
+ */
+
 export async function getBloodRequests({
   search,
   bloodGroup,
@@ -91,6 +98,9 @@ export async function getBloodRequests({
   const skip = (currentPage - 1) * itemsPerPage;
   const sortOrder = sort === "oldest" ? 1 : -1;
 
+  const totalCount = await BloodRequest.countDocuments(filter);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
   let bloodRequests;
 
   if (hasLocation) {
@@ -152,7 +162,7 @@ export async function getBloodRequests({
           contactNumber: 1,
           location: 1,
           neededBefore: 1,
-          notes: 1,
+          additionalNotes: 1,
           status: 1,
           interestedDonors: 1,
           assignedDonors: 1,
@@ -229,9 +239,17 @@ export async function getBloodRequests({
     };
   });
 
-  return replaceMongoIdInArray(requests) as BloodRequestCardData[];
+  return {
+    requests: replaceMongoIdInArray(requests) as BloodRequestCardData[],
+    totalCount,
+    totalPages,
+  };
 }
 
+// ------------------------------------
+// ------------------------------------
+
+// Interface for the populated requester document
 interface PopulatedRequester {
   _id: Types.ObjectId;
   name: string;
@@ -240,6 +258,7 @@ interface PopulatedRequester {
   phone: string;
 }
 
+// Interface for the populated donor document
 interface PopulatedDonor {
   _id: Types.ObjectId;
   name: string;
@@ -250,6 +269,7 @@ interface PopulatedDonor {
   location: LocationData;
 }
 
+// Interface for the populated assignment document
 interface PopulatedAssignment {
   _id: Types.ObjectId;
   donor: PopulatedDonor;
@@ -260,6 +280,12 @@ interface PopulatedAssignment {
   requesterConfirmedAt?: Date;
 }
 
+/**
+ * Fetches a blood request by its ID and returns detailed information about the request, including requester details, interested donors, assigned donors, and user-specific flags.
+ *
+ * @param {string} requestId - The ID of the blood request to fetch.
+ * @returns {Promise<BloodRequestDetailData | null>} A promise that resolves to the detailed blood request data or null if not found.
+ */
 export async function getBloodRequestById(
   requestId: string,
 ): Promise<BloodRequestDetailData | null> {

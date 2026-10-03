@@ -21,7 +21,7 @@ export default async function BloodRequestsPage({
   const currentPage = Number(params.page) || 1;
   const itemsPerPage = 9;
 
-  const requests = await getBloodRequests({
+  const { requests, totalPages, totalCount } = await getBloodRequests({
     ...params,
     page: currentPage,
     itemsPerPage,
@@ -70,7 +70,8 @@ export default async function BloodRequestsPage({
                   </h2>
 
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {requests.length} requests found
+                    {totalCount} {totalCount === 1 ? "request" : "requests"}{" "}
+                    found
                   </p>
                 </div>
               </div>
@@ -82,7 +83,10 @@ export default async function BloodRequestsPage({
               </div>
 
               {/*  pagination UI */}
-              <BloodRequestPagination />
+              <BloodRequestPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+              />
             </>
           ) : (
             <EmptyState
