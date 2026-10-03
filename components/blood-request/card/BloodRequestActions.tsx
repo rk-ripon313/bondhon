@@ -84,7 +84,8 @@ export default function BloodRequestActions({
           {canEditOrDelete && (
             <>
               <DropdownMenuItem
-                className="cursor-pointer gap-2"
+                className="cursor-pointer gap-2 disabled:text-muted-foreground focus:text-muted-foreground"
+                disabled={isExpired}
                 onClick={() => setOpenEdit(true)}
               >
                 <Pencil className="size-4" />
@@ -92,7 +93,8 @@ export default function BloodRequestActions({
               </DropdownMenuItem>
 
               <DropdownMenuItem
-                className="cursor-pointer gap-2 text-red-500 focus:text-red-500"
+                className="cursor-pointer gap-2 text-red-500 focus:text-red-500 disabled:text-muted-foreground"
+                disabled={isExpired}
                 onClick={() => setOpenDelete(true)}
               >
                 <Trash2 className="size-4" />

@@ -1,6 +1,18 @@
 import { BLOOD_GROUPS, REQUEST_URGENCY } from "@/constants";
 import { LocationData } from "./location.type";
 
+export interface GetBloodRequestsParams {
+  search?: string;
+  bloodGroup?: string;
+  status?: string;
+  urgency?: string;
+  sort?: string;
+  lat?: string | number;
+  lng?: string | number;
+  page?: string | number;
+  itemsPerPage?: number;
+}
+
 export interface BloodRequestCardData {
   id: string;
 

@@ -19,7 +19,9 @@ export default function BloodRequestCardFooter({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const { isOwner, isAssigned, isInterested } = request;
+  const { isOwner, isAssigned, isInterested, neededBefore } = request;
+
+  const isExpired = new Date(neededBefore) <= new Date();
 
   const handleInterestToggle = () => {
     if (isOwner || isAssigned || isPending) return;
@@ -44,7 +46,7 @@ export default function BloodRequestCardFooter({
         <Button
           variant={isAssigned ? "outline" : "default"}
           size="sm"
-          disabled={isOwner || isPending || isAssigned}
+          disabled={isOwner || isPending || isAssigned || isExpired}
           onClick={handleInterestToggle}
           className={cn(
             "h-8 shrink-0 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold sm:px-3",

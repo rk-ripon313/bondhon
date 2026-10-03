@@ -7,12 +7,29 @@ import BloodRequestFilters from "@/components/blood-request/BloodRequestFilters"
 import BloodRequestPagination from "@/components/blood-request/BloodRequestPagination";
 import BloodRequestCard from "@/components/blood-request/card/BloodRequestCard";
 import EmptyState from "@/components/shared/EmptyState";
+import LocationInitializer from "@/components/shared/LocationInitializer";
 import { Button } from "@/components/ui/button";
+import { GetBloodRequestsParams } from "@/types/blood-request.type";
 
-export default async function BloodRequestsPage() {
-  const requests = await getBloodRequests();
+export default async function BloodRequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<GetBloodRequestsParams>;
+}) {
+  const params = await searchParams;
+
+  const currentPage = Number(params.page) || 1;
+  const itemsPerPage = 9;
+
+  const requests = await getBloodRequests({
+    ...params,
+    page: currentPage,
+    itemsPerPage,
+  });
+
   return (
     <div className="min-h-screen w-full bg-app-background px-4 py-8 sm:px-6 lg:px-8">
+      <LocationInitializer />
       <div className="mx-auto w-full max-w-7xl">
         {/* Header */}
         <section className="mb-7">

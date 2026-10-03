@@ -9,23 +9,179 @@ import {
   BloodRequestCardData,
   BloodRequestDetailData,
   BloodRequestDetailDonor,
+  GetBloodRequestsParams,
 } from "@/types/blood-request.type";
 import { LocationData } from "@/types/location.type";
 import { Types } from "mongoose";
 
-export async function getBloodRequests(requesterId?: string) {
+export async function getBloodRequests({
+  search,
+  bloodGroup,
+  status,
+  urgency,
+  sort = "newest",
+  lat,
+  lng,
+  page = 1,
+  itemsPerPage = 9,
+}: GetBloodRequestsParams = {}) {
   const currentUser = await getCurrentUser();
   const currentUserId = currentUser?.id;
 
-  const filter = requesterId ? { requester: requesterId } : {};
+  const filter: Record<string, unknown> = {};
 
-  const bloodRequests = await BloodRequest.find(filter)
-    .populate({
-      path: "requester",
-      select: "name username image",
-    })
-    .sort({ createdAt: -1 })
-    .lean();
+  // Search
+  if (search?.trim()) {
+    const searchRegex = new RegExp(search.trim(), "i");
+
+    filter.$or = [
+      { hospitalName: searchRegex },
+      { "location.district": searchRegex },
+      { "location.area": searchRegex },
+      { "location.address": searchRegex },
+    ];
+  }
+
+  // Blood Group
+  if (bloodGroup && bloodGroup !== "all") {
+    filter.bloodGroupNeeded = bloodGroup;
+  }
+
+  // Status
+  if (status && status !== "all") {
+    filter.status = status;
+  }
+
+  // Urgency
+  if (urgency && urgency !== "all") {
+    filter.urgency = urgency;
+  }
+
+  // --------------------------------------------------
+  // Resolve location
+  // URL location has priority.
+  // If unavailable, use current user's saved location.
+  // --------------------------------------------------
+
+  let latitude: number | undefined;
+  let longitude: number | undefined;
+
+  const parsedLat = Number(lat);
+  const parsedLng = Number(lng);
+
+  if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
+    latitude = parsedLat;
+    longitude = parsedLng;
+  } else {
+    const userCoordinates = currentUser?.location?.coordinates?.coordinates;
+
+    if (Array.isArray(userCoordinates) && userCoordinates.length === 2) {
+      const [userLng, userLat] = userCoordinates;
+
+      if (typeof userLat === "number" && typeof userLng === "number") {
+        latitude = userLat;
+        longitude = userLng;
+      }
+    }
+  }
+
+  const hasLocation = latitude !== undefined && longitude !== undefined;
+
+  const currentPage = Number(page) || 1;
+  const skip = (currentPage - 1) * itemsPerPage;
+  const sortOrder = sort === "oldest" ? 1 : -1;
+
+  let bloodRequests;
+
+  if (hasLocation) {
+    const currentLatitude = latitude as number;
+    const currentLongitude = longitude as number;
+
+    bloodRequests = await BloodRequest.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [currentLongitude, currentLatitude],
+          },
+          distanceField: "distance",
+          spherical: true,
+          key: "location.coordinates.coordinates",
+          query: filter,
+        },
+      },
+
+      {
+        $sort: {
+          distance: 1,
+          createdAt: sortOrder,
+        },
+      },
+
+      {
+        $skip: skip,
+      },
+
+      {
+        $limit: itemsPerPage,
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "requester",
+          foreignField: "_id",
+          as: "requester",
+        },
+      },
+
+      {
+        $unwind: {
+          path: "$requester",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $project: {
+          distance: 1,
+          bloodGroupNeeded: 1,
+          quantity: 1,
+          urgency: 1,
+          hospitalName: 1,
+          contactNumber: 1,
+          location: 1,
+          neededBefore: 1,
+          notes: 1,
+          status: 1,
+          interestedDonors: 1,
+          assignedDonors: 1,
+
+          requester: {
+            _id: 1,
+            name: 1,
+            username: 1,
+            image: 1,
+            phone: 1,
+            email: 1,
+          },
+
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ]);
+  } else {
+    bloodRequests = await BloodRequest.find(filter)
+      .populate({
+        path: "requester",
+        select: "name username image phone email",
+      })
+      .sort({ createdAt: sortOrder })
+      .skip(skip)
+      .limit(itemsPerPage)
+      .lean();
+  }
 
   const requests = bloodRequests.map((request) => {
     const interestedDonors = (request.interestedDonors ??
@@ -35,10 +191,24 @@ export async function getBloodRequests(requesterId?: string) {
       donor: Types.ObjectId;
     }[];
 
+    const requester = request.requester as {
+      _id: Types.ObjectId;
+      name: string;
+      username: string;
+      image: string;
+    };
+    const requestData = { ...request };
+
+    delete requestData.interestedDonors;
+    delete requestData.assignedDonors;
+
     return {
-      ...request,
-      requester: replaceMongoIdInObject(request.requester),
+      ...requestData,
+
+      requester: requester ? replaceMongoIdInObject(requester) : null,
+
       interestedCount: interestedDonors.length,
+
       assignedCount: assignedDonors.length,
 
       isInterested: currentUserId
@@ -52,7 +222,7 @@ export async function getBloodRequests(requesterId?: string) {
         : false,
 
       isOwner: currentUserId
-        ? request.requester._id.toString() === currentUserId
+        ? requester?._id.toString() === currentUserId
         : false,
 
       currentUserId,

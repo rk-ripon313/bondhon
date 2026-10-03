@@ -1,13 +1,11 @@
 "use client";
 
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { MapPin, Search, X } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-import {
-  BLOOD_GROUPS,
-  REQUEST_STATUSES,
-  REQUEST_URGENCY,
-} from "@/constants/index";
+import { BLOOD_GROUPS, REQUEST_STATUSES, REQUEST_URGENCY } from "@/constants";
+import { findMe } from "@/lib/location/find-me";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,95 +16,188 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { debounce } from "@/lib/helpers/debounce";
 
-const SORT_OPTIONS = [
-  {
-    value: "needed-soonest",
-    label: "Needed soonest",
-  },
-  {
-    value: "newest",
-    label: "Newest",
-  },
-  {
-    value: "urgency",
-    label: "Highest urgency",
-  },
-];
+const SORT_OPTIONS = ["newest", "oldest"] as const;
 
-const getLabel = (value: string) => {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-};
+const CONTROL_CLASS =
+  "h-8 min-h-8 w-full !rounded-lg border border-border bg-app-background px-3 py-0 text-sm leading-none";
 
 export default function BloodRequestFilters() {
-  const [search, setSearch] = useState("");
-  const [bloodGroup, setBloodGroup] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [urgency, setUrgency] = useState("all");
-  const [sortBy, setSortBy] = useState("needed-soonest");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const hasFilters =
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+
+  const bloodGroup = searchParams.get("bloodGroup") ?? "all";
+  const status = searchParams.get("status") ?? "all";
+  const urgency = searchParams.get("urgency") ?? "all";
+
+  const sortParam = searchParams.get("sort");
+  const sortBy: (typeof SORT_OPTIONS)[number] = SORT_OPTIONS.includes(
+    sortParam as (typeof SORT_OPTIONS)[number],
+  )
+    ? (sortParam as (typeof SORT_OPTIONS)[number])
+    : "newest";
+
+  const hasActiveFilters =
     search.trim() !== "" ||
     bloodGroup !== "all" ||
     status !== "all" ||
     urgency !== "all" ||
-    sortBy !== "needed-soonest";
+    sortBy !== "newest";
 
-  const clearAll = () => {
-    setSearch("");
-    setBloodGroup("all");
-    setStatus("all");
-    setUrgency("all");
-    setSortBy("needed-soonest");
+  const updateParam = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (!value || value === "all") {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+
+    params.delete("page");
+
+    router.replace(`${pathname}?${params.toString()}`, {
+      scroll: false,
+    });
   };
 
-  const removeFilter = (filter: string) => {
-    if (filter === "search") setSearch("");
-    if (filter === "bloodGroup") setBloodGroup("all");
-    if (filter === "status") setStatus("all");
-    if (filter === "urgency") setUrgency("all");
-    if (filter === "sortBy") setSortBy("needed-soonest");
+  const debouncedSearch = debounce((value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("search", value);
+    } else {
+      params.delete("search");
+    }
+    params.delete("page");
+    router.push(`${pathname}?${params.toString()}`);
+  }, 400);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    debouncedSearch(value);
+  };
+
+  const handleClearFilters = () => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete("search");
+    params.delete("bloodGroup");
+    params.delete("status");
+    params.delete("urgency");
+    params.delete("sort");
+    params.delete("page");
+
+    setSearch("");
+
+    router.replace(`${pathname}?${params.toString()}`, {
+      scroll: false,
+    });
+  };
+
+  const handleFindNearby = async () => {
+    try {
+      const location = await findMe();
+
+      if (!location?.coordinates) {
+        return;
+      }
+
+      const [lng, lat] = location.coordinates.coordinates;
+
+      if (typeof lat !== "number" || typeof lng !== "number") {
+        return;
+      }
+
+      const params = new URLSearchParams(searchParams.toString());
+
+      params.set("lat", lat.toFixed(5));
+      params.set("lng", lng.toFixed(5));
+      params.delete("page");
+
+      router.replace(`${pathname}?${params.toString()}`, {
+        scroll: false,
+      });
+    } catch (error) {
+      console.warn("Failed to find nearby location:", error);
+    }
   };
 
   return (
-    <section className="mb-7 rounded-xl border border-border bg-app-card p-4 sm:p-5">
-      {/* Header */}
-      <div className="mb-4 flex items-center gap-2">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-app-primary/10 text-app-primary">
-          <SlidersHorizontal className="size-4" />
+    <section className="mb-8 rounded-xl border border-border bg-card/40 p-3">
+      {/* Top Row */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_170px_170px]">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+          <Input
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search blood requests..."
+            className={`${CONTROL_CLASS} pl-9 pr-9`}
+          />
+
+          {search && (
+            <button
+              type="button"
+              onClick={() => handleSearchChange("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
 
-        <div>
-          <h2 className="text-sm font-semibold">Search & filters</h2>
+        {/* Find Nearby */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleFindNearby}
+          className={`${CONTROL_CLASS} cursor-pointer`}
+        >
+          <MapPin className="size-4" />
+          Use my location
+        </Button>
 
-          <p className="text-xs text-muted-foreground">
-            Narrow down blood requests
-          </p>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search hospital, area or district..."
-          className="h-10 pl-9"
-        />
-      </div>
-
-      {/* Filter controls */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Blood group */}
-        <Select value={bloodGroup} onValueChange={setBloodGroup}>
-          <SelectTrigger className="h-10 w-full">
-            <SelectValue placeholder="Blood group" />
+        {/* Sort */}
+        <Select
+          value={sortBy}
+          onValueChange={(value) => {
+            if (SORT_OPTIONS.includes(value as (typeof SORT_OPTIONS)[number])) {
+              updateParam("sort", value);
+            }
+          }}
+        >
+          <SelectTrigger className={CONTROL_CLASS}>
+            <SelectValue placeholder="Sort" />
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="all">All groups</SelectItem>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option === "newest" ? "Newest" : "Oldest"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Bottom Row */}
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Blood Group */}
+        <Select
+          value={bloodGroup}
+          onValueChange={(value) => updateParam("bloodGroup", value)}
+        >
+          <SelectTrigger className={CONTROL_CLASS}>
+            <SelectValue placeholder="Blood Group" />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="all">Blood Group</SelectItem>
 
             {BLOOD_GROUPS.map((group) => (
               <SelectItem key={group} value={group}>
@@ -117,146 +208,56 @@ export default function BloodRequestFilters() {
         </Select>
 
         {/* Status */}
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="h-10 w-full">
+        <Select
+          value={status}
+          onValueChange={(value) => updateParam("status", value)}
+        >
+          <SelectTrigger className={CONTROL_CLASS}>
             <SelectValue placeholder="Status" />
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="all">Status</SelectItem>
 
             {REQUEST_STATUSES.map((item) => (
               <SelectItem key={item} value={item}>
-                {getLabel(item)}
+                {item.charAt(0).toUpperCase() + item.slice(1)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         {/* Urgency */}
-        <Select value={urgency} onValueChange={setUrgency}>
-          <SelectTrigger className="h-10 w-full">
+        <Select
+          value={urgency}
+          onValueChange={(value) => updateParam("urgency", value)}
+        >
+          <SelectTrigger className={CONTROL_CLASS}>
             <SelectValue placeholder="Urgency" />
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="all">All urgency</SelectItem>
+            <SelectItem value="all">Urgency</SelectItem>
 
             {REQUEST_URGENCY.map((item) => (
               <SelectItem key={item} value={item}>
-                {getLabel(item)}
+                {item.charAt(0).toUpperCase() + item.slice(1)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* Sort */}
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="h-10 w-full">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-
-          <SelectContent>
-            {SORT_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Active filters */}
-      <div className="mt-4 border-t border-border pt-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
-              Active filters
-            </p>
-
-            {hasFilters ? (
-              <div className="flex flex-wrap gap-2">
-                {search.trim() && (
-                  <FilterBadge
-                    label={`Search: ${search}`}
-                    onRemove={() => removeFilter("search")}
-                  />
-                )}
-
-                {bloodGroup !== "all" && (
-                  <FilterBadge
-                    label={`Blood: ${bloodGroup}`}
-                    onRemove={() => removeFilter("bloodGroup")}
-                  />
-                )}
-
-                {status !== "all" && (
-                  <FilterBadge
-                    label={`Status: ${getLabel(status)}`}
-                    onRemove={() => removeFilter("status")}
-                  />
-                )}
-
-                {urgency !== "all" && (
-                  <FilterBadge
-                    label={`Urgency: ${getLabel(urgency)}`}
-                    onRemove={() => removeFilter("urgency")}
-                  />
-                )}
-
-                {sortBy !== "needed-soonest" && (
-                  <FilterBadge
-                    label={`Sort: ${
-                      SORT_OPTIONS.find((option) => option.value === sortBy)
-                        ?.label
-                    }`}
-                    onRemove={() => removeFilter("sortBy")}
-                  />
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No filters applied
-              </p>
-            )}
-          </div>
-
-          {hasFilters && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearAll}
-              className="h-8 shrink-0 cursor-pointer self-start text-muted-foreground hover:text-foreground"
-            >
-              Clear all
-            </Button>
-          )}
-        </div>
+        {/* Clear */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleClearFilters}
+          disabled={!hasActiveFilters}
+          className={`${CONTROL_CLASS} cursor-pointer disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          Clear filters
+        </Button>
       </div>
     </section>
-  );
-}
-
-function FilterBadge({
-  label,
-  onRemove,
-}: {
-  label: string;
-  onRemove: () => void;
-}) {
-  return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-app-background px-2.5 py-1 text-xs text-foreground">
-      <span className="max-w-[220px] truncate">{label}</span>
-
-      <button
-        type="button"
-        onClick={onRemove}
-        className="shrink-0 cursor-pointer rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        aria-label={`Remove ${label} filter`}
-      >
-        <X className="size-3" />
-      </button>
-    </span>
   );
 }
