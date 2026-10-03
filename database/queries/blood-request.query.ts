@@ -4,6 +4,7 @@ import {
   replaceMongoIdInObject,
 } from "@/lib/helpers/transform-id";
 import { BloodRequest } from "@/models/blood-request.model";
+import { User } from "@/models/user.model";
 import {
   BloodRequestAssignment,
   BloodRequestCardData,
@@ -354,4 +355,97 @@ export async function getBloodRequestById(
     isInterested,
     isAssigned,
   } as BloodRequestDetailData;
+}
+
+// --------------------------------
+
+// --------------------------------
+
+export async function getBloodRequestsByUser(
+  identifier: string,
+  {
+    status = "active",
+    sort = "newest",
+    page = 1,
+    itemsPerPage = 10,
+  }: GetBloodRequestsParams = {},
+) {
+  const user = await User.findOne({
+    $or: [{ _id: identifier }, { username: identifier }],
+  })
+    .select("_id")
+    .lean();
+
+  if (!user) {
+    return {
+      requests: [],
+      totalCount: 0,
+      totalPages: 0,
+    };
+  }
+
+  const filter: Record<string, unknown> = {
+    requester: user._id,
+    status,
+  };
+
+  const sortOrder = sort === "oldest" ? 1 : -1;
+
+  const currentPage = Number(page) || 1;
+  const skip = (currentPage - 1) * itemsPerPage;
+
+  const [totalCount, bloodRequests] = await Promise.all([
+    BloodRequest.countDocuments(filter),
+
+    BloodRequest.find(filter)
+      .populate({
+        path: "requester",
+        select: "name username image phone email",
+      })
+      .sort({ createdAt: sortOrder })
+      .skip(skip)
+      .limit(itemsPerPage)
+      .lean(),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+  const requests = bloodRequests.map((request) => {
+    const interestedDonors = (request.interestedDonors ??
+      []) as Types.ObjectId[];
+
+    const assignedDonors = (request.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+    }[];
+
+    const requester = request.requester as {
+      _id: Types.ObjectId;
+      name: string;
+      username: string;
+      image?: string;
+      phone?: string;
+      email?: string;
+    };
+
+    const requestData = { ...request };
+
+    delete requestData.interestedDonors;
+    delete requestData.assignedDonors;
+
+    return {
+      ...requestData,
+      requester: requester ? replaceMongoIdInObject(requester) : null,
+      interestedCount: interestedDonors.length,
+      assignedCount: assignedDonors.length,
+      isInterested: false,
+      isAssigned: false,
+      isOwner: true,
+    };
+  });
+
+  return {
+    requests: replaceMongoIdInArray(requests) as BloodRequestCardData[],
+    totalCount,
+    totalPages,
+  };
 }

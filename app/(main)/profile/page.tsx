@@ -1,4 +1,4 @@
-import { getBloodRequests } from "@/database/queries/blood-request.query";
+import { getBloodRequestsByUser } from "@/database/queries/blood-request.query";
 import { getCurrentUser } from "@/database/queries/user.query";
 import { redirect } from "next/navigation";
 import LocationCard from "./components/LocationCard";
@@ -16,7 +16,7 @@ export default async function ProfilePage() {
   // console.log(user);
   const { followers, following, blockedUsers, ...editUser } = user;
 
-  const userBloodRequests = await getBloodRequests(user.id);
+  const { requests } = await getBloodRequestsByUser(user.id);
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
@@ -34,7 +34,7 @@ export default async function ProfilePage() {
         <LocationCard user={editUser} />
 
         {/* User Activity */}
-        <UserActivityTabs requests={userBloodRequests} />
+        <UserActivityTabs requests={requests} />
       </div>
     </section>
   );
