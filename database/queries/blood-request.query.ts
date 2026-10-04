@@ -358,13 +358,20 @@ export async function getBloodRequestById(
 }
 
 // --------------------------------
-
 // --------------------------------
+
+/**
+ * Fetches blood requests created by a specific user based on the provided parameters, including status, sorting, and pagination. Returns the filtered blood requests along with total count and total pages.
+ *
+ * @param {string} identifier - The user ID or username of the requester.
+ * @param {GetBloodRequestsParams} params - The parameters for filtering and sorting blood requests.
+ * @returns {Promise<{ requests: BloodRequestCardData[]; totalCount: number; totalPages: number }>} A promise that resolves to an object containing the filtered blood requests, total count, and total pages.
+ */
 
 export async function getBloodRequestsByUser(
   identifier: string,
   {
-    status = "active",
+    status = "all",
     sort = "newest",
     page = 1,
     itemsPerPage = 10,
@@ -386,12 +393,16 @@ export async function getBloodRequestsByUser(
 
   const filter: Record<string, unknown> = {
     requester: user._id,
-    status,
   };
+
+  // "all" means no status filter
+  if (status !== "all") {
+    filter.status = status;
+  }
 
   const sortOrder = sort === "oldest" ? 1 : -1;
 
-  const currentPage = Number(page) || 1;
+  const currentPage = Math.max(Number(page) || 1, 1);
   const skip = (currentPage - 1) * itemsPerPage;
 
   const [totalCount, bloodRequests] = await Promise.all([

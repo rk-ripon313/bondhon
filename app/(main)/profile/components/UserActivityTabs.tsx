@@ -1,91 +1,89 @@
 "use client";
 
-import BloodRequestModal from "@/components/blood-request/BloodRequestModal";
 import BloodRequestCard from "@/components/blood-request/card/BloodRequestCard";
+import ActivitySortFilter from "@/components/shared/ActivitySortFilter";
 import EmptyState from "@/components/shared/EmptyState";
-import { Button } from "@/components/ui/button";
+import Pagination from "@/components/shared/Pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { REQUEST_STATUSES } from "@/constants";
 import { BloodRequestCardData } from "@/types/blood-request.type";
-import { Activity, Calendar, Plus } from "lucide-react";
-import { useState } from "react";
+import { Activity, Calendar } from "lucide-react";
 
 type UserActivityTabsProps = {
   requests?: BloodRequestCardData[];
   events?: any[];
+  currentPage?: number;
+  totalPages?: number;
 };
 
 export default function UserActivityTabs({
   requests = [],
   events = [],
+  currentPage = 1,
+  totalPages = 1,
 }: UserActivityTabsProps) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <section className="overflow-hidden rounded-2xl border border-border/60 bg-app-card shadow-sm">
-      {/* Section Header */}
-      <div className="border-b border-border/60 px-5 py-4 sm:px-6">
-        <h2 className="text-lg font-semibold tracking-tight">Activity</h2>
-
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your blood requests and hosted events.
-        </p>
-      </div>
-
-      <div className="p-4 sm:p-5">
-        <Tabs defaultValue="requests" className="w-full">
-          {/* Tabs */}
-
-          <TabsList className="h-auto w-full justify-start gap-1 rounded-xl border bg-app-background  p-1">
-            <TabsTrigger
-              value="requests"
-              className="flex items-center gap-2 px-4 py-3 cursor-pointer rounded-lg text-xs sm:text-sm font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
-            >
-              <Activity className="size-4 text-rose-500" />
-              Blood Requests
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="events"
-              className="flex items-center gap-2 px-4 py-3 cursor-pointer rounded-lg text-xs sm:text-sm font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
-            >
-              <Calendar className="size-4 text-amber-500" />
-              Events Hosted
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Blood Requests Tab Content */}
-          <TabsContent
-            value="requests"
-            className="mt-5 space-y-4 outline-hidden"
-          >
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-muted/20 p-3.5 sm:p-4">
-              <div>
-                <h3 className="text-sm font-semibold">Blood Requests</h3>
-
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Requests you have created.
-                </p>
-              </div>
-
-              <Button
-                className="bg-app-primary text-white hover:bg-app-primary/90 shrink-0 gap-1.5 font-semibold cursor-pointer"
-                type="button"
-                size="sm"
-                onClick={() => setOpen(true)}
-              >
-                <Plus className="size-4" />
-                <span className="hidden sm:inline">Create Request</span>
-                <span className="sm:hidden">Create</span>
-              </Button>
+    <section className="w-full rounded-2xl border border-border/60 bg-app-card shadow-sm">
+      <Tabs defaultValue="requests" className="w-full">
+        {/* Sticky Activity Header + Toolbar */}
+        <div className="sticky top-16 z-30 border-b border-border/60 bg-app-card/95 px-4 py-4 backdrop-blur-md supports-[backdrop-filter]:bg-app-card/80 sm:px-5">
+          <div className="space-y-4">
+            {/* Activity Heading */}
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Activity</h2>
             </div>
 
-            {/* Requests */}
+            {/* Activity Toolbar */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Activity Tabs */}
+              <TabsList className="h-auto min-w-0 flex-1 justify-start gap-1 rounded-xl border border-border/60 bg-app-background p-1 sm:flex-none">
+                <TabsTrigger
+                  value="requests"
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-medium text-muted-foreground transition-all sm:flex-none sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+                >
+                  <Activity className="size-3.5 shrink-0 text-rose-500 sm:size-4" />
+                  <span>Blood Requests</span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value="events"
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-medium text-muted-foreground transition-all sm:flex-none sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
+                >
+                  <Calendar className="size-3.5 shrink-0 text-amber-500 sm:size-4" />
+                  <span>Events Hosted</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <ActivitySortFilter filterOptions={REQUEST_STATUSES} />
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Content */}
+        <div className="p-4 sm:p-5">
+          {/* Blood Requests */}
+          <TabsContent
+            value="requests"
+            className="mt-0 space-y-4 outline-hidden"
+          >
+            <div className="rounded-xl border border-border/40 bg-muted/20 p-3.5 sm:p-4">
+              <h3 className="text-sm font-semibold">Blood Requests</h3>
+
+              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                Requests you have created.
+              </p>
+            </div>
+
             {requests.length > 0 ? (
-              <div className="space-y-3">
-                {requests.map((request) => (
-                  <BloodRequestCard key={request.id} request={request} />
-                ))}
-              </div>
+              <>
+                <div className="space-y-3">
+                  {requests.map((request) => (
+                    <BloodRequestCard key={request.id} request={request} />
+                  ))}
+                </div>
+
+                <Pagination currentPage={currentPage} totalPages={totalPages} />
+              </>
             ) : (
               <EmptyState
                 icon={Activity}
@@ -96,30 +94,15 @@ export default function UserActivityTabs({
           </TabsContent>
 
           {/* Events */}
-          <TabsContent value="events" className="mt-5 space-y-4 outline-hidden">
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-muted/20 p-3.5 sm:p-4">
-              <div>
-                <h3 className="text-sm font-semibold">Events Hosted</h3>
+          <TabsContent value="events" className="mt-0 space-y-4 outline-hidden">
+            <div className="rounded-xl border border-border/40 bg-muted/20 p-3.5 sm:p-4">
+              <h3 className="text-sm font-semibold">Events Hosted</h3>
 
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Events you have organized.
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                size="sm"
-                className="bg-app-secondary text-white hover:bg-app-secondary/90 shrink-0 gap-1.5 font-semibold cursor-pointer"
-              >
-                <Plus className="size-4" />
-
-                <span className="hidden sm:inline">Create Event</span>
-
-                <span className="sm:hidden">Create</span>
-              </Button>
+              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                Events you have organized.
+              </p>
             </div>
 
-            {/* Events */}
             {events.length > 0 ? (
               <div className="space-y-3">
                 {/* EventCard will be added here */}
@@ -132,10 +115,8 @@ export default function UserActivityTabs({
               />
             )}
           </TabsContent>
-        </Tabs>
-      </div>
-
-      <BloodRequestModal mode="create" open={open} onOpenChange={setOpen} />
+        </div>
+      </Tabs>
     </section>
   );
 }

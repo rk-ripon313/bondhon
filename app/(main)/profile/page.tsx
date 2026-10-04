@@ -1,5 +1,6 @@
 import { getBloodRequestsByUser } from "@/database/queries/blood-request.query";
 import { getCurrentUser } from "@/database/queries/user.query";
+import { GetBloodRequestsParams } from "@/types/blood-request.type";
 import { redirect } from "next/navigation";
 import LocationCard from "./components/LocationCard";
 import MedicalProfileCard from "./components/MedicalProfileCard";
@@ -7,7 +8,11 @@ import PersonalInfoCard from "./components/PersonalInfoCard";
 import ProfileHero from "./components/profile-hero/ProfileHero";
 import UserActivityTabs from "./components/UserActivityTabs";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<GetBloodRequestsParams>;
+}) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -16,7 +21,14 @@ export default async function ProfilePage() {
   // console.log(user);
   const { followers, following, blockedUsers, ...editUser } = user;
 
-  const { requests } = await getBloodRequestsByUser(user.id);
+  const params = await searchParams;
+  const currentPage = Number(params.page) || 1;
+
+  const { requests, totalPages } = await getBloodRequestsByUser(user.id, {
+    ...params,
+    page: currentPage,
+    itemsPerPage: 10,
+  });
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
@@ -34,7 +46,11 @@ export default async function ProfilePage() {
         <LocationCard user={editUser} />
 
         {/* User Activity */}
-        <UserActivityTabs requests={requests} />
+        <UserActivityTabs
+          requests={requests}
+          currentPage={currentPage}
+          totalPages={totalPages}
+        />
       </div>
     </section>
   );
