@@ -1,4 +1,3 @@
-import CreateAction from "@/components/layout/CreateAction";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
@@ -46,9 +45,6 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col ">
         <SessionProvider>
           {children}
-
-          <CreateAction />
-
           <Toaster richColors position="top-center" />
         </SessionProvider>
       </body>

@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import CreateAction from "@/components/layout/CreateAction";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/navbar/Navbar";
 import { SessionUser } from "@/types/user.type";
@@ -18,6 +19,7 @@ export default async function MainLayout({
     <>
       <Navbar user={user} />
       <main className="flex-1">{children}</main>
+      <CreateAction />
       <Footer />
     </>
   );
