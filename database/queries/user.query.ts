@@ -23,6 +23,23 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
 }
 
 /**
+ *  Get a user by their username
+ */
+
+export async function getUserByUsername(username: string) {
+  await dbConnect();
+
+  const user = await User.findOne({
+    username: { $regex: new RegExp(`^${username}$`, "i") },
+  }).lean();
+
+  if (!user) {
+    return null;
+  }
+  return replaceMongoIdInObject(user) as UserProfile | null;
+}
+
+/**
  *  Check if a username is available
  */
 

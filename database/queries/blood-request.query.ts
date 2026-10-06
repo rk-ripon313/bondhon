@@ -391,11 +391,13 @@ export async function getBloodRequestsByUser(
     };
   }
 
+  const currentUser = await getCurrentUser();
+  const currentUserId = currentUser?.id;
+
   const filter: Record<string, unknown> = {
     requester: user._id,
   };
 
-  // "all" means no status filter
   if (status !== "all") {
     filter.status = status;
   }
@@ -446,11 +448,25 @@ export async function getBloodRequestsByUser(
     return {
       ...requestData,
       requester: requester ? replaceMongoIdInObject(requester) : null,
+
       interestedCount: interestedDonors.length,
       assignedCount: assignedDonors.length,
-      isInterested: false,
-      isAssigned: false,
-      isOwner: true,
+
+      isInterested: currentUserId
+        ? interestedDonors.some(
+            (donorId) => donorId.toString() === currentUserId,
+          )
+        : false,
+
+      isAssigned: currentUserId
+        ? assignedDonors.some((item) => item.donor.toString() === currentUserId)
+        : false,
+
+      isOwner: currentUserId
+        ? requester?._id.toString() === currentUserId
+        : false,
+
+      currentUserId,
     };
   });
 
