@@ -166,13 +166,17 @@ export async function getUserConnections(username: string) {
   );
 
   return {
+    isOwnProfile,
+
     followers: followersUser.map((follower) => ({
       ...follower,
+      isMe: follower._id.toString() === currentUser?.id,
       isFollowing: currentFollowingIds.has(follower._id.toString()),
     })),
 
     following: followingUser.map((following) => ({
       ...following,
+      isMe: following._id.toString() === currentUser?.id,
       isFollowing: currentFollowingIds.has(following._id.toString()),
     })),
   };

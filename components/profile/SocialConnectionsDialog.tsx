@@ -32,8 +32,11 @@ export default function SocialConnectionsDialog({
   activeTab,
   onTabChange,
 }: SocialConnectionsDialogProps) {
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+
   const [followers, setFollowers] = useState<UserConnection[]>([]);
   const [following, setFollowing] = useState<UserConnection[]>([]);
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export default function SocialConnectionsDialog({
           throw new Error(result.message);
         }
 
+        setIsOwnProfile(result.isOwnProfile);
         setFollowers(result.followers);
         setFollowing(result.following);
       } catch (error) {
@@ -112,16 +116,7 @@ export default function SocialConnectionsDialog({
                 </div>
               ) : followers.length > 0 ? (
                 followers.map((user) => (
-                  <FollowListItem
-                    key={user.username}
-                    user={user}
-                    type="followers"
-                    onRemove={(username) => {
-                      setFollowers((prev) =>
-                        prev.filter((user) => user.username !== username),
-                      );
-                    }}
-                  />
+                  <FollowListItem key={user.username} user={user} />
                 ))
               ) : (
                 <div className="flex min-h-[180px] items-center justify-center">
@@ -153,12 +148,15 @@ export default function SocialConnectionsDialog({
                   <FollowListItem
                     key={user.username}
                     user={user}
-                    type="following"
-                    onRemove={(username) => {
-                      setFollowing((prev) =>
-                        prev.filter((user) => user.username !== username),
-                      );
-                    }}
+                    onRemove={
+                      isOwnProfile
+                        ? (username) => {
+                            setFollowing((prev) =>
+                              prev.filter((user) => user.username !== username),
+                            );
+                          }
+                        : undefined
+                    }
                   />
                 ))
               ) : (

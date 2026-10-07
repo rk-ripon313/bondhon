@@ -22,6 +22,7 @@ export async function loadUserConnections(username: string) {
       return {
         success: false,
         message: "User not found.",
+        isOwnProfile: false,
         followers: [],
         following: [],
       };
@@ -29,6 +30,7 @@ export async function loadUserConnections(username: string) {
 
     return {
       success: true,
+      isOwnProfile: connections.isOwnProfile,
       followers: connections.followers ?? [],
       following: connections.following ?? [],
     };
@@ -38,6 +40,7 @@ export async function loadUserConnections(username: string) {
     return {
       success: false,
       message: "Failed to load connections.",
+      isOwnProfile: false,
       followers: [],
       following: [],
     };

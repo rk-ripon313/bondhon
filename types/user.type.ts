@@ -53,5 +53,6 @@ export interface UserConnection {
   username: string;
   name: string;
   image?: string;
-  isFollowing?: boolean;
+  isFollowing: boolean;
+  isMe: boolean;
 }
