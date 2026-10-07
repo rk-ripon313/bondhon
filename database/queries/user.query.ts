@@ -28,16 +28,47 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
  */
 
 export async function getUserByUsername(username: string) {
+  const currentUser = await getCurrentUser();
+
   await dbConnect();
 
-  const user = await User.findOne({
-    username: { $regex: new RegExp(`^${username}$`, "i") },
-  }).lean();
+  const isOwnProfile = currentUser?.username === username;
+
+  const query: Record<string, unknown> = {
+    username: {
+      $regex: new RegExp(`^${username}$`, "i"),
+    },
+  };
+
+  if (currentUser && !isOwnProfile) {
+    query.blockedUsers = {
+      $ne: currentUser.id,
+    };
+
+    query._id = {
+      $nin: currentUser.blockedUsers ?? [],
+    };
+  }
+
+  const user = await User.findOne(query).lean();
 
   if (!user) {
     return null;
   }
-  return replaceMongoIdInObject(user) as UserProfile | null;
+
+  const userId = user._id.toString();
+
+  const isFollowing =
+    !isOwnProfile &&
+    (currentUser?.following?.some((id) => id.toString() === userId) ?? false);
+
+  const profile = replaceMongoIdInObject(user) as UserProfile;
+
+  return {
+    ...profile,
+    isOwnProfile,
+    isFollowing,
+  };
 }
 
 /**

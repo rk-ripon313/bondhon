@@ -1,16 +1,13 @@
 import { notFound } from "next/navigation";
 
 import { getBloodRequestsByUser } from "@/database/queries/blood-request.query";
-import {
-  getCurrentUser,
-  getUserByUsername,
-} from "@/database/queries/user.query";
+import { getUserByUsername } from "@/database/queries/user.query";
 
 import UserActivityTabs from "@/components/profile/UserActivityTabs";
 import UserProfileHero from "./components/UserProfileHero";
 import UserSidebar from "./components/UserSidebar";
 
-type UserPageProps = {
+interface UserPageProps {
   params: Promise<{
     username: string;
   }>;
@@ -19,7 +16,7 @@ type UserPageProps = {
     status?: string;
     sort?: string;
   }>;
-};
+}
 
 export default async function UserProfilePage({
   params,
@@ -34,9 +31,6 @@ export default async function UserProfilePage({
     notFound();
   }
 
-  const currentUser = await getCurrentUser();
-  const isOwnProfile = currentUser?.id === user.id;
-
   const currentPage = Number(query.page) || 1;
   const { requests, totalPages } = await getBloodRequestsByUser(user.id, {
     ...query,
@@ -48,7 +42,7 @@ export default async function UserProfilePage({
     <div className="min-h-screen w-full bg-app-background px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-7">
       <div className="space-y-5 mx-auto w-full max-w-7xl">
         {/* Profile Hero */}
-        <UserProfileHero user={user} isOwnProfile={isOwnProfile} />
+        <UserProfileHero user={user} />
 
         <section className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
           {/* Activity */}

@@ -1,39 +1,22 @@
-import {
-  Droplets,
-  Ellipsis,
-  Flag,
-  MapPin,
-  MessageCircle,
-  Share2,
-  ShieldAlert,
-  UserPlus,
-} from "lucide-react";
+import { Droplets, MapPin } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
 import ProfileStats from "@/components/profile/ProfileStats";
 import { getInitials } from "@/lib/helpers/formet-text";
 import { formatLocation } from "@/lib/helpers/location-format";
 import { UserProfile } from "@/types/user.type";
+import UserProfileActions from "./UserProfileActions";
 
-export default function UserProfileHero({
-  user,
-  isOwnProfile,
-}: {
-  user: UserProfile;
+type PublicUserProfile = UserProfile & {
   isOwnProfile: boolean;
-}) {
+  isFollowing: boolean;
+};
+
+export default function UserProfileHero({ user }: { user: PublicUserProfile }) {
   return (
     <section>
       <Card className="border-border/60 bg-app-card shadow-sm">
@@ -96,57 +79,8 @@ export default function UserProfileHero({
             </div>
 
             {/* Profile Actions */}
-            {!isOwnProfile && (
-              <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:pt-1">
-                <Button
-                  size="sm"
-                  className="h-9 min-w-24 cursor-pointer bg-emerald-600 px-4 text-white hover:bg-emerald-700"
-                >
-                  <UserPlus className="mr-1.5 size-4" />
-                  Follow
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-9 min-w-24 cursor-pointer px-4"
-                >
-                  <MessageCircle className="mr-1.5 size-4" />
-                  Message
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="size-9 cursor-pointer"
-                    >
-                      <Ellipsis className="size-4" />
-                      <span className="sr-only">More actions</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <Share2 className="mr-2 size-4" />
-                      Share Profile
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem className="cursor-pointer">
-                      <ShieldAlert className="mr-2 size-4" />
-                      Block User
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
-                      <Flag className="mr-2 size-4" />
-                      Report User
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+            {!user.isOwnProfile && (
+              <UserProfileActions username={user.username} isFollowing={true} />
             )}
           </div>
 
