@@ -80,7 +80,10 @@ export default function UserProfileHero({ user }: { user: PublicUserProfile }) {
 
             {/* Profile Actions */}
             {!user.isOwnProfile && (
-              <UserProfileActions username={user.username} isFollowing={true} />
+              <UserProfileActions
+                username={user.username}
+                isFollowing={user.isFollowing}
+              />
             )}
           </div>
 
