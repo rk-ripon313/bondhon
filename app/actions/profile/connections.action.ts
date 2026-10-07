@@ -2,20 +2,26 @@
 
 import {
   getCurrentUser,
-  getCurrentUserConnections,
+  getUserConnections,
 } from "@/database/queries/user.query";
 import { dbConnect } from "@/lib/db/db-connect";
 import { User } from "@/models/user.model";
 import { revalidatePath } from "next/cache";
 
-export async function loadUserConnections() {
+/**
+ * Loads the connections for a specific user.
+ * @param username The username of the user whose connections to load.
+ * @returns A promise resolving to the user's connections or an error message.
+ */
+
+export async function loadUserConnections(username: string) {
   try {
-    const connections = await getCurrentUserConnections();
+    const connections = await getUserConnections(username);
 
     if (!connections) {
       return {
         success: false,
-        message: "Unauthorized.",
+        message: "User not found.",
         followers: [],
         following: [],
       };

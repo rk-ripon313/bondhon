@@ -43,7 +43,8 @@ export default function UserActivityTabs({
                   className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-medium text-muted-foreground transition-all sm:flex-none sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
                 >
                   <Activity className="size-3.5 shrink-0 text-rose-500 sm:size-4" />
-                  <span>Blood Requests</span>
+                  <span className="sm:hidden">Requests</span>
+                  <span className="hidden sm:inline">Blood Requests</span>
                 </TabsTrigger>
 
                 <TabsTrigger
@@ -51,7 +52,8 @@ export default function UserActivityTabs({
                   className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-medium text-muted-foreground transition-all sm:flex-none sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
                 >
                   <Calendar className="size-3.5 shrink-0 text-amber-500 sm:size-4" />
-                  <span>Events Hosted</span>
+                  <span className="sm:hidden">Events</span>
+                  <span className="hidden sm:inline">Events Hosted</span>
                 </TabsTrigger>
               </TabsList>
 

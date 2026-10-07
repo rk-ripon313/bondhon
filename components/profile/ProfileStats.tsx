@@ -4,10 +4,12 @@ import { useState } from "react";
 import SocialConnectionsDialog from "./SocialConnectionsDialog";
 
 export default function ProfileStats({
+  username,
   followersCount,
   followingCount,
   donationsCount,
 }: {
+  username: string;
   followersCount: number;
   followingCount: number;
   donationsCount: number;
@@ -60,6 +62,7 @@ export default function ProfileStats({
 
       {/* Dialog */}
       <SocialConnectionsDialog
+        username={username}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         activeTab={activeTab}

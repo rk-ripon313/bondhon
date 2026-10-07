@@ -1,9 +1,10 @@
+import ProfileStats from "@/components/profile/ProfileStats";
+import { calculateProfileCompletion } from "@/lib/profile/profile-utils";
 import { UserProfile } from "@/types/user.type";
 import DonorAvailability from "./DonorAvailability";
 import ProfileAvatar from "./ProfileAvatar";
 import ProfileCompletion from "./ProfileCompletion";
 import ProfileMeta from "./ProfileMeta";
-import ProfileStats from "./ProfileStats";
 
 export default function ProfileHero({ user }: { user: UserProfile }) {
   return (
@@ -37,13 +38,16 @@ export default function ProfileHero({ user }: { user: UserProfile }) {
 
       {/* Stats */}
       <ProfileStats
+        username={user.username}
         followersCount={user.followers?.length ?? 0}
         followingCount={user.following?.length ?? 0}
         donationsCount={user.donationHistory?.length ?? 0}
       />
 
       {/* Profile completion */}
-      <ProfileCompletion user={user} />
+      {calculateProfileCompletion(user) !== 100 && (
+        <ProfileCompletion user={user} />
+      )}
     </div>
   );
 }

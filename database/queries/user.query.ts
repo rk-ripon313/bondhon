@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/db/db-connect";
 import { replaceMongoIdInObject } from "@/lib/helpers/transform-id";
 import { User } from "@/models/user.model";
 import { UserProfile } from "@/types/user.type";
+import { Types } from "mongoose";
 
 /**
  *  Get the currently authenticated user
@@ -70,23 +71,80 @@ export async function isUsernameAvailable(
 }
 
 /**
- *  Get the currently authenticated user's connections (followers and following)
+ *  Get the connections (followers and following) of a user
+ * @param username The username of the user whose connections to load.
+ * @returns A promise resolving to the user's connections or null if not found.
  */
 
-export async function getCurrentUserConnections() {
-  const session = await auth();
+export async function getUserConnections(username: string) {
+  const currentUser = await getCurrentUser();
 
-  if (!session?.user?.email) {
-    return null;
-  }
+  const isOwnProfile = currentUser?.username === username;
+  const blockedUsers = currentUser?.blockedUsers ?? [];
 
   await dbConnect();
 
-  return User.findOne({ email: session.user.email })
-    .select("followers following")
-    .populate("followers", "name username image -_id")
-    .populate("following", "name username image -_id")
+  const user = await User.findOne({ username })
+    .select("_id followers following")
+    .populate([
+      {
+        path: "followers",
+        select: "name username image",
+        ...(isOwnProfile
+          ? {}
+          : {
+              match: {
+                _id: { $nin: blockedUsers },
+              },
+            }),
+      },
+      {
+        path: "following",
+        select: "name username image",
+        ...(isOwnProfile
+          ? {}
+          : {
+              match: {
+                _id: { $nin: blockedUsers },
+              },
+            }),
+      },
+    ])
     .lean();
+
+  if (!user) {
+    return null;
+  }
+
+  const followersUser = (user.followers ?? []) as {
+    _id: Types.ObjectId;
+    name: string;
+    username: string;
+    image?: string;
+  }[];
+
+  const followingUser = (user.following ?? []) as {
+    _id: Types.ObjectId;
+    name: string;
+    username: string;
+    image?: string;
+  }[];
+
+  const currentFollowingIds = new Set(
+    (currentUser?.following ?? []).map((id) => id.toString()),
+  );
+
+  return {
+    followers: followersUser.map((follower) => ({
+      ...follower,
+      isFollowing: currentFollowingIds.has(follower._id.toString()),
+    })),
+
+    following: followingUser.map((following) => ({
+      ...following,
+      isFollowing: currentFollowingIds.has(following._id.toString()),
+    })),
+  };
 }
 
 /**

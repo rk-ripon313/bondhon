@@ -18,6 +18,7 @@ import FollowListItem from "./FollowListItem";
 type ConnectionTab = "followers" | "following";
 
 interface SocialConnectionsDialogProps {
+  username: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activeTab: ConnectionTab;
@@ -25,6 +26,7 @@ interface SocialConnectionsDialogProps {
 }
 
 export default function SocialConnectionsDialog({
+  username,
   open,
   onOpenChange,
   activeTab,
@@ -41,7 +43,7 @@ export default function SocialConnectionsDialog({
       try {
         setLoading(true);
 
-        const result = await loadUserConnections();
+        const result = await loadUserConnections(username);
 
         if (!result.success) {
           throw new Error(result.message);
@@ -52,17 +54,20 @@ export default function SocialConnectionsDialog({
       } catch (error) {
         console.error("Load connections error:", error);
         toast.error(getErrorMessage(error));
+
+        setFollowers([]);
+        setFollowing([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchConnections();
-  }, [open]);
+  }, [open, username]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[70vh] max-h-[600px] min-h-[260px] w-[calc(100%-2rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-2xl border-border bg-app-card p-0 text-app-foreground shadow-lg ">
+      <DialogContent className="flex h-[70vh] max-h-[600px] min-h-[260px] w-[calc(100%-2rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-2xl border-border bg-app-card p-0 text-app-foreground shadow-lg">
         {/* Header */}
         <DialogHeader className="shrink-0 border-b border-border px-5 py-4">
           <DialogTitle className="text-base font-semibold text-app-foreground">
@@ -78,7 +83,7 @@ export default function SocialConnectionsDialog({
         >
           {/* Tab Navigation */}
           <div className="shrink-0 px-4 pt-4">
-            <TabsList className="grid  h-10  w-full  grid-cols-2  rounded-xl  bg-app-background  p-1 ">
+            <TabsList className="grid h-10 w-full grid-cols-2 rounded-xl bg-app-background p-1">
               <TabsTrigger
                 value="followers"
                 className="cursor-pointer rounded-lg text-xs font-medium text-app-muted transition-all data-[state=active]:bg-app-card data-[state=active]:text-app-foreground data-[state=active]:shadow-sm"
@@ -98,11 +103,11 @@ export default function SocialConnectionsDialog({
           {/* Followers */}
           <TabsContent
             value="followers"
-            className=" min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3 outline-none "
+            className="min-h-0 flex-1 overflow-y-auto custom-scrollbar px-4 pb-4 pt-3 outline-none"
           >
             <div className="rounded-xl border border-border bg-app-background p-2">
               {loading ? (
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex min-h-[180px] items-center justify-center">
                   <Spinner />
                 </div>
               ) : followers.length > 0 ? (
@@ -136,11 +141,11 @@ export default function SocialConnectionsDialog({
           {/* Following */}
           <TabsContent
             value="following"
-            className=" min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3 outline-none"
+            className="min-h-0 flex-1 overflow-y-auto custom-scrollbar px-4 pb-4 pt-3 outline-none"
           >
             <div className="rounded-xl border border-border bg-app-background p-2">
               {loading ? (
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex min-h-[180px] items-center justify-center">
                   <Spinner />
                 </div>
               ) : following.length > 0 ? (

@@ -1,3 +1,4 @@
+import UserActivityTabs from "@/components/profile/UserActivityTabs";
 import { getBloodRequestsByUser } from "@/database/queries/blood-request.query";
 import { getCurrentUser } from "@/database/queries/user.query";
 import { GetBloodRequestsParams } from "@/types/blood-request.type";
@@ -6,7 +7,6 @@ import LocationCard from "./components/LocationCard";
 import MedicalProfileCard from "./components/MedicalProfileCard";
 import PersonalInfoCard from "./components/PersonalInfoCard";
 import ProfileHero from "./components/profile-hero/ProfileHero";
-import UserActivityTabs from "./components/UserActivityTabs";
 
 export default async function ProfilePage({
   searchParams,

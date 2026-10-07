@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
+import ProfileStats from "@/components/profile/ProfileStats";
 import { getInitials } from "@/lib/helpers/formet-text";
 import { formatLocation } from "@/lib/helpers/location-format";
 import { UserProfile } from "@/types/user.type";
@@ -152,42 +153,12 @@ export default function UserProfileHero({
           <Separator />
 
           {/* Profile Stats */}
-
-          {/* TODO: Extract ProfileStats component later.
-              If it becomes reusable across /profile and /user/[username],
-              move it to @/components/shared/ProfileStats.tsx. */}
-
-          <div className="grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-app-background p-2.5 sm:p-3">
-            <button
-              type="button"
-              className="flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-lg px-2 py-2 transition-colors hover:bg-app-card"
-            >
-              <span className="text-xs text-app-muted">Followers</span>
-
-              <span className="mt-0.5 text-sm font-semibold text-app-foreground sm:text-base">
-                {user.followers?.length ?? 0}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className="flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-lg px-2 py-2 transition-colors hover:bg-app-card"
-            >
-              <span className="text-xs text-app-muted">Following</span>
-
-              <span className="mt-0.5 text-sm font-semibold text-app-foreground sm:text-base">
-                {user.following?.length ?? 0}
-              </span>
-            </button>
-
-            <div className="flex min-h-14 flex-col items-center justify-center px-2 py-2 text-center">
-              <span className="text-xs text-app-muted">Donations</span>
-
-              <span className="mt-0.5 text-sm font-semibold text-app-primary sm:text-base">
-                {user.donationHistory?.length ?? 0}
-              </span>
-            </div>
-          </div>
+          <ProfileStats
+            username={user.username}
+            followersCount={user.followers?.length ?? 0}
+            followingCount={user.following?.length ?? 0}
+            donationsCount={user.donationHistory?.length ?? 0}
+          />
         </CardContent>
       </Card>
     </section>

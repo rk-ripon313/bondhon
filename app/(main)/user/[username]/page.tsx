@@ -6,7 +6,7 @@ import {
   getUserByUsername,
 } from "@/database/queries/user.query";
 
-import UserActivityTabs from "@/components/shared/UserActivityTabs";
+import UserActivityTabs from "@/components/profile/UserActivityTabs";
 import UserProfileHero from "./components/UserProfileHero";
 import UserSidebar from "./components/UserSidebar";
 
@@ -65,5 +65,3 @@ export default async function UserProfilePage({
     </div>
   );
 }
-
-
