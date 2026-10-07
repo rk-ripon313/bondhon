@@ -12,11 +12,13 @@ import { toast } from "sonner";
 
 interface FollowListItemProps {
   user: UserConnection;
+  type: "followers" | "following";
   onRemove?: (username: string) => void;
 }
 
 export default function FollowListItem({
   user,
+  type,
   onRemove,
 }: FollowListItemProps) {
   const [isFollowing, setIsFollowing] = useState(user.isFollowing);
@@ -92,7 +94,7 @@ export default function FollowListItem({
         </div>
 
         {/* Follow Action */}
-        {user.isMe ? (
+        {user.isMe && type === "followers" ? (
           <span className="px-1 text-xs text-app-muted">You</span>
         ) : (
           <Button

@@ -116,7 +116,11 @@ export default function SocialConnectionsDialog({
                 </div>
               ) : followers.length > 0 ? (
                 followers.map((user) => (
-                  <FollowListItem key={user.username} user={user} />
+                  <FollowListItem
+                    key={user.username}
+                    type="followers"
+                    user={user}
+                  />
                 ))
               ) : (
                 <div className="flex min-h-[180px] items-center justify-center">
@@ -147,6 +151,7 @@ export default function SocialConnectionsDialog({
                 following.map((user) => (
                   <FollowListItem
                     key={user.username}
+                    type="following"
                     user={user}
                     onRemove={
                       isOwnProfile
