@@ -94,7 +94,7 @@ export default function FollowListItem({
         </div>
 
         {/* Follow Action */}
-        {user.isMe && type === "followers" ? (
+        {user.isMe && type === "following" ? (
           <span className="px-1 text-xs text-app-muted">You</span>
         ) : (
           <Button
