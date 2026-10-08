@@ -1,14 +1,18 @@
 "use server";
 
+import { BLOOD_GROUPS, MAX_NOTIFICATION_RADIUS_KM } from "@/constants";
 import { getCurrentUser } from "@/database/queries/user.query";
+import { isBloodGroupCompatible } from "@/lib/blood/blood-group";
 import { dbConnect } from "@/lib/db/db-connect";
 import { localDateTimeToUTC } from "@/lib/helpers/date";
+import { createNotifications } from "@/lib/notifications/notification.service";
 import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
 import {
   BloodRequestFormInput,
   bloodRequestSchema,
 } from "@/lib/validations/blood-request/blood-request.schema";
 import { BloodRequest } from "@/models/blood-request.model";
+import { User } from "@/models/user.model";
 import { Types } from "mongoose";
 import { revalidatePath } from "next/cache";
 
@@ -43,13 +47,39 @@ export async function createBloodRequest(data: BloodRequestFormInput) {
 
     const neededBefore = localDateTimeToUTC(validation.data.neededBefore);
 
-    await BloodRequest.create({
+    const bloodRequest = await BloodRequest.create({
       ...validation.data,
       requester: user?.id,
       neededBefore,
     });
 
-    // TODO: Notify nearby eligible donors
+    const compatibleBloodGroups = BLOOD_GROUPS.filter((bloodGroup) =>
+      isBloodGroupCompatible(bloodGroup, bloodRequest.bloodGroupNeeded),
+    );
+
+    const nearbyDonorIds = await User.find({
+      _id: { $ne: user.id },
+      bloodGroup: { $in: compatibleBloodGroups },
+      isAvailableForDonate: true,
+      "location.coordinates.coordinates": {
+        $near: {
+          $geometry: bloodRequest.location.coordinates,
+          $maxDistance: MAX_NOTIFICATION_RADIUS_KM * 1000,
+        },
+      },
+    })
+      .select("_id")
+      .lean();
+
+    // Notify nearby available donors with compatible blood groups.
+    await createNotifications({
+      receivers: nearbyDonorIds.map((donor) => donor._id),
+      actor: user.id,
+      type: "blood_request_created",
+      title: "New Blood Request",
+      message: `A new ${bloodRequest.bloodGroupNeeded} blood request is available near you.`,
+      link: `/blood-requests/${bloodRequest._id.toString()}`,
+    });
 
     revalidatePath("/");
     revalidatePath("/profile");
@@ -145,14 +175,24 @@ export async function updateBloodRequest(
       };
     }
 
-    // Keep the existing donor IDs before updating the request.
-
+    // Notify interested donors and pending assigned donors about the update.
     const interestedDonorIds = (request.interestedDonors ??
       []) as Types.ObjectId[];
 
-    const assignedDonorIds = (
-      (request.assignedDonors ?? []) as { donor: Types.ObjectId }[]
-    ).map((assignment) => assignment.donor);
+    const pendingAssignedDonorIds = (
+      (request.assignedDonors ?? []) as {
+        donor: Types.ObjectId;
+        donationStatus: string;
+      }[]
+    )
+      .filter((assignment) => assignment.donationStatus === "pending")
+      .map((assignment) => assignment.donor);
+
+    // Combine interested donors and pending assigned donors for notification.
+    const notificationReceiverIds = [
+      ...interestedDonorIds,
+      ...pendingAssignedDonorIds,
+    ];
 
     const neededBefore = localDateTimeToUTC(validation.data.neededBefore);
 
@@ -173,15 +213,15 @@ export async function updateBloodRequest(
       };
     }
 
-    // Notify interested donors
-    if (interestedDonorIds.length > 0) {
-      // TODO: notify interested donors
-    }
-
-    // Notify assigned donors
-    if (assignedDonorIds.length > 0) {
-      // TODO: notify assigned donors
-    }
+    // Notify interested donors and pending assigned donors about the update.
+    await createNotifications({
+      receivers: notificationReceiverIds,
+      actor: user.id,
+      type: "blood_request_updated",
+      title: "Blood Request Updated",
+      message: "A blood request you are connected to has been updated.",
+      link: `/blood-requests/${requestId}`,
+    });
 
     revalidatePath("/");
     revalidatePath("/profile");

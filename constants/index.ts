@@ -35,6 +35,10 @@ export const EVENT_STATUS = [
   "cancelled",
 ] as const;
 
+export const MAX_NOTIFICATION_RADIUS_KM = 25;
+
+export const MAX_INTEREST_DISTANCE_KM = 50;
+
 export const NOTIFICATION_TYPES = [
   // Blood request
   "blood_request_created",
