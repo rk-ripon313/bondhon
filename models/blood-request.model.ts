@@ -30,6 +30,7 @@ const bloodRequestSchema = new Schema(
     contactNumber: { type: String, required: true },
 
     status: { type: String, enum: REQUEST_STATUSES, default: "active" },
+    reminderSentAt: { type: Date, default: null },
 
     interestedDonors: [{ type: Schema.Types.ObjectId, ref: "User" }],
 

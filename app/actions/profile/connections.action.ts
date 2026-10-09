@@ -5,6 +5,7 @@ import {
   getUserConnections,
 } from "@/database/queries/user.query";
 import { dbConnect } from "@/lib/db/db-connect";
+import { createNotifications } from "@/lib/notifications/notification.service";
 import { User } from "@/models/user.model";
 import { revalidatePath } from "next/cache";
 
@@ -106,6 +107,7 @@ export async function toggleFollow(username: string) {
     }
 
     if (isFollowing) {
+      // Unfollow the target user
       await Promise.all([
         User.findByIdAndUpdate(currentUserId, {
           $pull: {
@@ -129,19 +131,35 @@ export async function toggleFollow(username: string) {
       };
     }
 
-    await Promise.all([
-      User.findByIdAndUpdate(currentUserId, {
-        $addToSet: {
-          following: targetUserId,
-        },
-      }),
-
-      User.findByIdAndUpdate(targetUserId, {
-        $addToSet: {
-          followers: currentUserId,
-        },
-      }),
+    const [updatedCurrentUser, updatedTargetUser] = await Promise.all([
+      User.findByIdAndUpdate(
+        currentUserId,
+        { $addToSet: { following: targetUserId } },
+        { new: true },
+      ),
+      User.findByIdAndUpdate(
+        targetUserId,
+        { $addToSet: { followers: currentUserId } },
+        { new: true },
+      ),
     ]);
+
+    if (!updatedCurrentUser || !updatedTargetUser) {
+      return {
+        success: false,
+        message: "Failed to update follow status.",
+      };
+    }
+
+    // Create a notification for the target user about the new follower
+    await createNotifications({
+      receivers: [targetUserId],
+      actor: currentUserId,
+      type: "user_followed",
+      title: "New Follower",
+      message: `${currentUser.name} started following you.`,
+      link: `/user/${currentUser.username}`,
+    });
 
     revalidatePath("/profile");
 

@@ -10,6 +10,7 @@ import {
 import { isBloodGroupCompatible } from "@/lib/blood/blood-group";
 import { dbConnect } from "@/lib/db/db-connect";
 import { getDistanceInKm } from "@/lib/location/distance";
+import { createNotifications } from "@/lib/notifications/notification.service";
 import { isUserEligibleForAction } from "@/lib/profile/profile-utils";
 import { BloodRequest } from "@/models/blood-request.model";
 import { User } from "@/models/user.model";
@@ -156,7 +157,7 @@ export async function toggleBloodRequestInterest(requestId: string) {
     }
 
     // Add interest.
-    await BloodRequest.updateOne(
+    const updateResult = await BloodRequest.updateOne(
       { _id: requestId },
       {
         $addToSet: {
@@ -165,7 +166,22 @@ export async function toggleBloodRequestInterest(requestId: string) {
       },
     );
 
-    // TODO: Notify requester that a donor showed interest.
+    if (updateResult.modifiedCount !== 1) {
+      return {
+        success: false,
+        message: "Failed to show interest in this blood request.",
+      };
+    }
+
+    // Notify requester that a donor showed interest.
+    await createNotifications({
+      receivers: [request.requester],
+      actor: userId,
+      type: "blood_request_interested",
+      title: "New Interest",
+      message: "Someone is interested in donating for your blood request.",
+      link: `/blood-requests/${requestId}`,
+    });
 
     revalidatePath("/");
     revalidatePath("/profile");
@@ -417,7 +433,15 @@ export async function assignBloodRequestDonor(
       };
     }
 
-    // TODO: Notify the donor that they have been assigned.
+    // Notify the donor that they have been assigned.
+    await createNotifications({
+      receivers: [donorId],
+      actor: userId,
+      type: "blood_request_assigned",
+      title: "Donor Assigned",
+      message: "You have been assigned to a blood request.",
+      link: `/blood-requests/${requestId}`,
+    });
 
     revalidatePath("/blood-requests");
     revalidatePath(`/blood-requests/${requestId}`);
@@ -533,7 +557,19 @@ export async function cancelBloodRequestAssignment(
       };
     }
 
-    // TODO: Notify the donor/requester about the cancellation.
+    // Notify the other party about the cancellation.
+    await createNotifications({
+      receivers: [isOwner ? donorId : request.requester],
+      actor: userId,
+      type: isOwner
+        ? "blood_request_requester_canceled"
+        : "blood_request_donor_canceled",
+      title: "Assignment Cancelled",
+      message: isOwner
+        ? "Your donor assignment for a blood request has been cancelled."
+        : "A donor has cancelled their assignment for your blood request.",
+      link: `/blood-requests/${requestId}`,
+    });
 
     revalidatePath("/");
     revalidatePath("/profile");
@@ -634,9 +670,7 @@ export async function confirmBloodDonationByDonor(requestId: string) {
       // Both donor and requester have now confirmed the donation.
       assignment.donationStatus = "donated";
 
-      // Use the earlier of the requester's confirmation and the deadline
-      // so a late requester confirmation does not artificially delay
-      // the donor's donation date and cooldown.
+      // Use the earlier of the requester's confirmation and the deadline.
       const donatedAt =
         assignment.requesterConfirmedAt! <= bloodRequest.neededBefore
           ? assignment.requesterConfirmedAt!
@@ -644,12 +678,14 @@ export async function confirmBloodDonationByDonor(requestId: string) {
 
       assignment.donatedAt = donatedAt;
 
-      // Only fully confirmed donations count toward the required quantity.
+      // Count fully confirmed donations, including the current donation.
       const donatedCount = assignedDonors.filter(
         (item) => item.donationStatus === "donated",
       ).length;
 
-      if (donatedCount >= bloodRequest.quantity) {
+      const requestCompleted = donatedCount >= bloodRequest.quantity;
+
+      if (requestCompleted) {
         bloodRequest.status = "completed";
       }
 
@@ -657,14 +693,35 @@ export async function confirmBloodDonationByDonor(requestId: string) {
 
       // Update donor history only after the donation becomes final.
       await updateUserDonationHistory(currentUser.id, requestId, donatedAt);
+
+      // Notify requester only when the request is completed.
+      if (requestCompleted) {
+        await createNotifications({
+          receivers: [bloodRequest.requester],
+          actor: currentUser.id,
+          type: "blood_request_completed",
+          title: "Blood Request Completed",
+          message: "Your blood request has been completed successfully.",
+          link: `/blood-requests/${requestId}`,
+        });
+      }
     } else {
       // Only donor has confirmed so far.
       assignment.donationStatus = "confirmed_by_donor";
 
       await bloodRequest.save();
-    }
 
-    // TODO: Notify requester to confirm the donation.
+      // Notify requester to confirm the donation.
+      await createNotifications({
+        receivers: [bloodRequest.requester],
+        actor: currentUser.id,
+        type: "blood_request_donor_confirmed",
+        title: "Donation Confirmation",
+        message:
+          "The assigned donor has confirmed the donation. Please confirm the donation.",
+        link: `/blood-requests/${requestId}`,
+      });
+    }
 
     revalidatePath(`/blood-requests/${requestId}`);
     revalidatePath("/profile");
@@ -771,9 +828,7 @@ export async function confirmBloodDonationByRequester(
       // Both donor and requester have now confirmed the donation.
       assignment.donationStatus = "donated";
 
-      // Use the earlier of the donor's confirmation and the deadline
-      // so a late confirmation does not artificially delay the
-      // donor's donation date and cooldown.
+      // Use the earlier of the donor's confirmation and the deadline.
       const donatedAt =
         assignment.donorConfirmedAt! <= bloodRequest.neededBefore
           ? assignment.donorConfirmedAt!
@@ -781,27 +836,58 @@ export async function confirmBloodDonationByRequester(
 
       assignment.donatedAt = donatedAt;
 
-      // Only fully confirmed donations count toward the required quantity.
+      // Count fully confirmed donations, including the current donation.
       const donatedCount = assignedDonors.filter(
         (item) => item.donationStatus === "donated",
       ).length;
 
-      if (donatedCount >= bloodRequest.quantity) {
+      const requestCompleted = donatedCount >= bloodRequest.quantity;
+      if (requestCompleted) {
         bloodRequest.status = "completed";
       }
-
       await bloodRequest.save();
 
       // Update donor history only after the donation becomes final.
       await updateUserDonationHistory(donorId, requestId, donatedAt);
+
+      // Notify donor that the donation is successful.
+      await createNotifications({
+        receivers: [donorId],
+        actor: currentUser.id,
+        type: "blood_request_donation_successful",
+        title: "Donation Confirmed",
+        message: "Your blood donation has been confirmed by the requester.",
+        link: `/blood-requests/${requestId}`,
+      });
+
+      // Notify requester only when the required quantity is fulfilled.
+      if (requestCompleted) {
+        await createNotifications({
+          receivers: [bloodRequest.requester],
+          actor: currentUser.id,
+          type: "blood_request_completed",
+          title: "Blood Request Completed",
+          message: "Your blood request has been completed successfully.",
+          link: `/blood-requests/${requestId}`,
+        });
+      }
     } else {
       // Only the requester has confirmed so far.
       assignment.donationStatus = "confirmed_by_requester";
 
       await bloodRequest.save();
-    }
 
-    // TODO: Notify donor about the confirmation.
+      // Notify donor to confirm the donation.
+      await createNotifications({
+        receivers: [donorId],
+        actor: currentUser.id,
+        type: "blood_request_requester_confirmed",
+        title: "Donation Confirmation",
+        message:
+          "The requester has confirmed your donation. Please confirm it to complete the process.",
+        link: `/blood-requests/${requestId}`,
+      });
+    }
 
     revalidatePath(`/blood-requests/${requestId}`);
     revalidatePath("/profile");
