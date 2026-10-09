@@ -142,7 +142,9 @@
 }
 
 @layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     @apply border-border;
   }
 
@@ -152,6 +154,9 @@
 
   body {
     @apply bg-app-background text-app-foreground font-body antialiased;
+    transition:
+      background-color 250ms ease,
+      color 250ms ease;
   }
 
   h1,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import ThemeToggle from "@/components/shared/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { SessionUser } from "@/types/user.type";
 import { LogIn, UserPlus } from "lucide-react";
@@ -59,6 +60,7 @@ export default function Navbar({ user }: NavbarProps) {
           {/* RIGHT */}
           <div className="flex items-center gap-2">
             <WeatherButton />
+            <ThemeToggle />
 
             {user ? (
               <>

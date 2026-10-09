@@ -1,3 +1,4 @@
+import ThemeProvider from "@/components/shared/ThemeProvider";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
@@ -44,8 +45,10 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col ">
         <SessionProvider>
-          {children}
-          <Toaster richColors position="top-center" />
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {children}
+            <Toaster richColors position="top-center" />
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>
