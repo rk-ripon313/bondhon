@@ -10,7 +10,7 @@ import Link from "next/link";
 import DesktopNav from "./DesktopNav";
 import MobileNav from "./MobileNav";
 import NavLogo from "./NavLogo";
-import NotificationButton from "./NotificationButton";
+import NotificationButton from "./notification/NotificationButton";
 import UserMenu from "./UserMenu";
 import WeatherButton from "./WeatherButton";
 

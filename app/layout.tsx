@@ -35,6 +35,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
+      suppressHydrationWarning
       className={cn(
         inter.variable,
         sora.variable,
