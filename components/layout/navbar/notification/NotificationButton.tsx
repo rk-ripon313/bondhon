@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
-import { Bell, Check, LoaderCircle } from "lucide-react";
+import { Bell, LoaderCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,14 +18,14 @@ import {
   loadUnreadNotificationCount,
 } from "@/app/actions/notification/notification.action";
 import EmptyState from "@/components/shared/EmptyState";
-import { getTimeAgo } from "@/lib/helpers/date";
 import { getErrorMessage } from "@/lib/helpers/error";
-import { getNotificationIcon } from "@/lib/notifications/notification-utils";
 import { Notification } from "@/types/notification.type";
-import Link from "next/link";
 import LoadingSkeleton from "./LoadingSkeleton";
+import NotificationHeader from "./NotificationHeader";
+import NotificationItem from "./NotificationItem";
 
 type NotificationFilter = "all" | "unread";
+
 export default function NotificationButton() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<NotificationFilter>("all");
@@ -83,6 +82,34 @@ export default function NotificationButton() {
     fetchUnreadCount();
   }, []);
 
+  const handleReadChange = (id: string, isRead: boolean) => {
+    const currentNotification = notifications.find(
+      (notification) => notification.id === id,
+    );
+
+    if (!currentNotification || currentNotification.isRead === isRead) {
+      return;
+    }
+
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id ? { ...notification, isRead } : notification,
+      ),
+    );
+
+    setUnreadCount((count) => Math.max(0, count + (isRead ? -1 : 1)));
+  };
+
+  const handleDeleted = (id: string, wasUnread: boolean) => {
+    setNotifications((current) =>
+      current.filter((notification) => notification.id !== id),
+    );
+
+    if (wasUnread) {
+      setUnreadCount((count) => Math.max(0, count - 1));
+    }
+  };
+
   return (
     <Popover
       open={open}
@@ -116,28 +143,19 @@ export default function NotificationButton() {
         className="w-[calc(100vw-24px)] max-w-[400px] overflow-hidden rounded-2xl border-border/70 bg-app-background p-0 shadow-xl sm:w-[400px]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-4 pt-2">
-          <div>
-            <h2 className="text-base font-semibold">Notifications</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {unreadCount > 0
-                ? `${unreadCount} unread notifications`
-                : "You're all caught up"}
-            </p>
-          </div>
+        <NotificationHeader
+          unreadCount={unreadCount}
+          onMarkAllRead={() => {
+            setNotifications((current) =>
+              current.map((notification) => ({
+                ...notification,
+                isRead: true,
+              })),
+            );
 
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={unreadCount === 0}
-            // onClick={markAllAsRead}
-            className="h-8 gap-1.5 px-2 text-xs text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600"
-          >
-            <Check className="size-3.5" />
-            Mark all read
-          </Button>
-        </div>
-
+            setUnreadCount(0);
+          }}
+        />
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-border/70 px-3 pt-2">
           {(["all", "unread"] as const).map((tab) => (
@@ -189,69 +207,15 @@ export default function NotificationButton() {
             </div>
           ) : notifications.length > 0 ? (
             <div className="divide-y divide-border/50">
-              {notifications.map((notification) => {
-                const Icon = getNotificationIcon(notification.type);
-
-                return (
-                  <div
-                    key={notification.id}
-                    className={`relative flex gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 ${
-                      !notification.isRead ? "bg-muted/25" : ""
-                    }`}
-                  >
-                    {/* Actor image or type icon */}
-                    <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
-                      {notification.actor?.image ? (
-                        <Link
-                          href={`/user/${notification.actor.username}`}
-                          className="flex items-center justify-center"
-                        >
-                          <Image
-                            src={notification.actor.image}
-                            alt={notification.actor.name || "User"}
-                            width={44}
-                            height={44}
-                            className="size-full object-cover"
-                          />
-                        </Link>
-                      ) : (
-                        <Icon
-                          className={`size-5 ${
-                            notification.type.startsWith("blood_request")
-                              ? "text-red-500"
-                              : notification.type === "user_followed"
-                                ? "text-blue-500"
-                                : "text-emerald-600"
-                          }`}
-                        />
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="min-w-0 flex-1 pr-1">
-                      <p className="text-[13px] leading-5 text-foreground">
-                        <span className="font-semibold">
-                          {notification.title}
-                        </span>{" "}
-                        <span className="text-muted-foreground">
-                          {notification.message}
-                        </span>
-                      </p>
-
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {getTimeAgo(notification.createdAt)}
-                      </p>
-                    </div>
-
-                    {!notification.isRead && (
-                      <span
-                        aria-label="Unread"
-                        className="mt-1.5 size-2 shrink-0 rounded-full bg-app-primary"
-                      />
-                    )}
-                  </div>
-                );
-              })}
+              {notifications.map((notification) => (
+                <NotificationItem
+                  key={notification.id}
+                  notification={notification}
+                  onReadChange={handleReadChange}
+                  onDeleted={handleDeleted}
+                  onOpen={() => setOpen(false)}
+                />
+              ))}
 
               {loadingMore && <LoadingSkeleton />}
             </div>
@@ -268,7 +232,7 @@ export default function NotificationButton() {
         </div>
 
         {/* Load more */}
-        {hasMore && (
+        {hasMore ? (
           <div className="border-t border-border/70 p-2.5">
             <Button
               variant="ghost"
@@ -288,6 +252,15 @@ export default function NotificationButton() {
               )}
             </Button>
           </div>
+        ) : (
+          !loading &&
+          !loadingMore &&
+          !error &&
+          notifications.length > 0 && (
+            <p className="border-t border-border/50 px-4 py-3 text-center text-xs text-muted-foreground">
+              {"You've reached the end"}
+            </p>
+          )
         )}
       </PopoverContent>
     </Popover>
