@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getTimeAgo } from "@/lib/helpers/date";
 import { getErrorMessage } from "@/lib/helpers/error";
 import type { Notification } from "@/types/notification.type";
 import NotificationTypeIcon from "./NotificationTypeIcon";
@@ -131,27 +132,22 @@ export default function NotificationItem({
             </span>
           </p>
 
-          <button
-            type="button"
-            onClick={handleOpen}
-            className="mt-1 inline-flex cursor-pointer items-center text-xs font-medium text-app-primary hover:underline"
-          >
-            View notification
-            <span aria-hidden="true" className="ml-1">
-              →
-            </span>
-          </button>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {getTimeAgo(notification.createdAt)}
+          </p>
 
-          <button
-            type="button"
-            onClick={handleOpen}
-            className="mt-1 inline-flex cursor-pointer items-center text-xs font-medium text-app-primary hover:underline"
-          >
-            View notification
-            <span aria-hidden="true" className="ml-1">
-              →
-            </span>
-          </button>
+          {notification?.link && (
+            <button
+              type="button"
+              onClick={handleOpen}
+              className="mt-1 inline-flex cursor-pointer items-center text-xs font-medium text-app-primary hover:underline"
+            >
+              View notification
+              <span aria-hidden="true" className="ml-1">
+                →
+              </span>
+            </button>
+          )}
         </div>
 
         {!isRead && (

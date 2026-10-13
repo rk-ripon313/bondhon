@@ -10,6 +10,7 @@ import {
   playNotificationSound,
 } from "@/lib/notifications/notification-sound";
 import type { Notification } from "@/types/notification.type";
+import { toast } from "sonner";
 
 interface UseNotificationPollingProps {
   open: boolean;
@@ -73,6 +74,10 @@ export function useNotificationPolling({
           playSound
         ) {
           playNotificationSound();
+
+          toast(latest.title, {
+            description: latest.message,
+          });
         }
         latestNotificationIdRef.current = latestId;
         setUnreadCount(result.unreadCount);
