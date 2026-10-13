@@ -4,7 +4,7 @@ import { Check, Circle, MoreHorizontal, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createElement, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -20,10 +20,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getTimeAgo } from "@/lib/helpers/date";
 import { getErrorMessage } from "@/lib/helpers/error";
-import { getNotificationIcon } from "@/lib/notifications/notification-utils";
 import type { Notification } from "@/types/notification.type";
+import NotificationTypeIcon from "./NotificationTypeIcon";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -45,11 +44,6 @@ export default function NotificationItem({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isRead = notification.isRead;
-
-  const notificationIcon = createElement(
-    getNotificationIcon(notification.type),
-    { className: "size-5" },
-  );
 
   const updateReadStatus = async (nextIsRead: boolean) => {
     if (isUpdatingRead || nextIsRead === isRead) return;
@@ -107,17 +101,14 @@ export default function NotificationItem({
 
   return (
     <>
-      <div
-        className={`flex gap-3 px-4 py-3.5 transition-colors hover:bg-app-muted/50 ${
-          !isRead ? "bg-app-muted/25" : ""
-        }`}
-      >
+      <div className="flex gap-3 px-4 py-3 transition-colors hover:bg-app-muted/30">
         <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
           {notification.actor?.username ? (
             <Link
               href={`/user/${notification.actor.username}`}
               aria-label={`View ${notification.actor.name}'s profile`}
               className="flex size-full items-center justify-center"
+              onClick={onOpen}
             >
               <Image
                 src={notification.actor?.image || "/avatars/default.png"}
@@ -128,15 +119,11 @@ export default function NotificationItem({
               />
             </Link>
           ) : (
-            notificationIcon
+            <NotificationTypeIcon type={notification.type} />
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpen}
-          className="min-w-0 flex-1 cursor-pointer text-left"
-        >
+        <div className="min-w-0 flex-1">
           <p className="text-[13px] leading-5 text-foreground">
             <span className="font-semibold">{notification.title}</span>{" "}
             <span className="text-muted-foreground">
@@ -144,10 +131,28 @@ export default function NotificationItem({
             </span>
           </p>
 
-          <p className="mt-1 text-xs text-muted-foreground">
-            {getTimeAgo(notification.createdAt)}
-          </p>
-        </button>
+          <button
+            type="button"
+            onClick={handleOpen}
+            className="mt-1 inline-flex cursor-pointer items-center text-xs font-medium text-app-primary hover:underline"
+          >
+            View notification
+            <span aria-hidden="true" className="ml-1">
+              →
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpen}
+            className="mt-1 inline-flex cursor-pointer items-center text-xs font-medium text-app-primary hover:underline"
+          >
+            View notification
+            <span aria-hidden="true" className="ml-1">
+              →
+            </span>
+          </button>
+        </div>
 
         {!isRead && (
           <span

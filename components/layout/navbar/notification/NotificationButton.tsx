@@ -1,9 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Bell, LoaderCircle } from "lucide-react";
+import { toast } from "sonner";
 
+import {
+  loadNotifications,
+  markAllNotificationsAsRead,
+} from "@/app/actions/notification/notification.action";
+import EmptyState from "@/components/shared/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,23 +17,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { toast } from "sonner";
-
-import {
-  loadNotifications,
-  loadUnreadNotificationCount,
-} from "@/app/actions/notification/notification.action";
-import EmptyState from "@/components/shared/EmptyState";
 import { getErrorMessage } from "@/lib/helpers/error";
-import { Notification } from "@/types/notification.type";
+import type { Notification } from "@/types/notification.type";
+
+import { useNotificationPolling } from "@/hooks/use-notification-polling";
 import LoadingSkeleton from "./LoadingSkeleton";
 import NotificationHeader from "./NotificationHeader";
 import NotificationItem from "./NotificationItem";
 
+// Available notification tabs.
 type NotificationFilter = "all" | "unread";
 
 export default function NotificationButton() {
   const [open, setOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState<NotificationFilter>("all");
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -39,6 +42,13 @@ export default function NotificationButton() {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState("");
 
+  // Handles background polling, unread-count refresh, and notification sound.
+  useNotificationPolling({
+    open,
+    setUnreadCount,
+  });
+
+  // Fetches notifications and either replaces the list or appends another page.
   const fetchNotifications = useCallback(
     async (filter: NotificationFilter, skip: number, append: boolean) => {
       if (append) {
@@ -60,6 +70,7 @@ export default function NotificationButton() {
         setNotifications((current) =>
           append ? [...current, ...items] : items,
         );
+
         setUnreadCount(result.unreadCount);
         setHasMore(result.hasMore);
       } catch (error) {
@@ -73,15 +84,15 @@ export default function NotificationButton() {
     [],
   );
 
-  // Load the unread badge count when the component mounts.
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      const result = await loadUnreadNotificationCount();
-      setUnreadCount(result.count);
-    };
-    fetchUnreadCount();
-  }, []);
+  // Updates the selected tab and loads its first page.
+  const handleTabChange = (tab: NotificationFilter) => {
+    if (tab === activeTab) return;
 
+    setActiveTab(tab);
+    void fetchNotifications(tab, 0, false);
+  };
+
+  // Updates local notification state after a notification's read status changes.
   const handleReadChange = (id: string, isRead: boolean) => {
     const currentNotification = notifications.find(
       (notification) => notification.id === id,
@@ -91,15 +102,23 @@ export default function NotificationButton() {
       return;
     }
 
-    setNotifications((current) =>
-      current.map((notification) =>
-        notification.id === id ? { ...notification, isRead } : notification,
-      ),
-    );
+    // Remove read notifications from the Unread tab.
+    if (activeTab === "unread" && isRead) {
+      setNotifications((current) =>
+        current.filter((notification) => notification.id !== id),
+      );
+    } else {
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === id ? { ...notification, isRead } : notification,
+        ),
+      );
+    }
 
     setUnreadCount((count) => Math.max(0, count + (isRead ? -1 : 1)));
   };
 
+  // Removes a deleted notification and adjusts the unread badge if necessary.
   const handleDeleted = (id: string, wasUnread: boolean) => {
     setNotifications((current) =>
       current.filter((notification) => notification.id !== id),
@@ -110,13 +129,41 @@ export default function NotificationButton() {
     }
   };
 
+  // Marks all notifications as read on the server before updating the UI.
+  const handleMarkAllRead = async () => {
+    try {
+      const result = await markAllNotificationsAsRead();
+
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      if (activeTab === "unread") {
+        setNotifications([]);
+        setHasMore(false);
+      } else {
+        setNotifications((current) =>
+          current.map((notification) => ({
+            ...notification,
+            isRead: true,
+          })),
+        );
+      }
+
+      setUnreadCount(0);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
   return (
     <Popover
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
+
         if (nextOpen) {
-          fetchNotifications(activeTab, 0, false);
+          void fetchNotifications(activeTab, 0, false);
         }
       }}
     >
@@ -125,7 +172,7 @@ export default function NotificationButton() {
           variant="ghost"
           size="icon"
           aria-label="Notifications"
-          className="relative size-10 rounded-xl cursor-pointer"
+          className="relative size-10 cursor-pointer rounded-xl"
         >
           <Bell className="size-[18px]" />
 
@@ -145,28 +192,17 @@ export default function NotificationButton() {
         {/* Header */}
         <NotificationHeader
           unreadCount={unreadCount}
-          onMarkAllRead={() => {
-            setNotifications((current) =>
-              current.map((notification) => ({
-                ...notification,
-                isRead: true,
-              })),
-            );
-
-            setUnreadCount(0);
-          }}
+          onMarkAllRead={handleMarkAllRead}
         />
+
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-border/70 px-3 pt-2">
           {(["all", "unread"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
-              onClick={() => {
-                setActiveTab(tab);
-                fetchNotifications(tab, 0, false);
-              }}
-              className={`relative px-3 py-2.5 text-sm font-medium cursor-pointer capitalize transition-colors ${
+              onClick={() => handleTabChange(tab)}
+              className={`relative cursor-pointer px-3 py-2.5 text-sm font-medium capitalize transition-colors ${
                 activeTab === tab
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -197,10 +233,13 @@ export default function NotificationButton() {
           ) : error ? (
             <div className="flex min-h-40 flex-col items-center justify-center gap-3 px-5 text-center">
               <p className="text-sm text-muted-foreground">{error}</p>
+
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => fetchNotifications(activeTab, 0, false)}
+                onClick={() => {
+                  fetchNotifications(activeTab, 0, false);
+                }}
               >
                 Try again
               </Button>
@@ -236,11 +275,11 @@ export default function NotificationButton() {
           <div className="border-t border-border/70 p-2.5">
             <Button
               variant="ghost"
-              className="h-9 w-full text-sm font-medium text-muted-foreground hover:text-foreground cursor-pointer"
+              className="h-9 w-full cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground"
               disabled={loadingMore}
-              onClick={() =>
-                fetchNotifications(activeTab, notifications.length, true)
-              }
+              onClick={() => {
+                fetchNotifications(activeTab, notifications.length, true);
+              }}
             >
               {loadingMore ? (
                 <span className="flex items-center justify-center gap-2">
