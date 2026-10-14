@@ -24,6 +24,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { BloodRequestAssignment } from "@/types/blood-request.type";
 
+import FollowToggle from "@/components/shared/FollowToggle";
 import DonorAvatar from "./DonorAvatar";
 
 interface AssignedDonorRowProps {
@@ -115,56 +116,71 @@ export default function AssignedDonorRow({
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <DonorAvatar donor={donor} />
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="truncate text-sm font-medium">{donor.name}</p>
+            <div className="min-w-0 flex-1">
+              {/* Donor name and follow action */}
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <Link
+                  href={`/user/${donor.username}`}
+                  className="min-w-0 truncate text-sm font-semibold text-app-foreground transition hover:text-app-primary"
+                >
+                  {donor.name}
+                </Link>
 
-                {isCurrentUser && (
-                  <span className="shrink-0 rounded-full bg-app-primary/10 px-2 py-0.5 text-[11px] font-medium text-app-primary">
+                {isCurrentUser ? (
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     You
                   </span>
+                ) : (
+                  <FollowToggle
+                    username={donor.username}
+                    isFollowing={donor.isFollowing}
+                    className="shrink-0"
+                  />
                 )}
               </div>
 
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="font-medium text-app-primary">
+              {/* Blood group, location and donation status */}
+              <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                <span className="font-semibold text-app-primary">
                   {donor.bloodGroup}
                 </span>
 
                 {donor.location?.area && (
                   <>
-                    <span>•</span>
-                    <span className="truncate">{donor.location.area}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="max-w-full truncate">
+                      {donor.location.area}
+                    </span>
                   </>
                 )}
 
-                <span>•</span>
+                <span aria-hidden="true">·</span>
 
                 {isDonated ? (
-                  <span className="flex items-center gap-1 text-emerald-500">
-                    <BadgeCheck className="size-3.5" />
+                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <BadgeCheck className="size-3.5 shrink-0" />
                     Donation completed
                   </span>
                 ) : isCanceled ? (
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <XCircle className="size-3.5" />
+                  <span className="inline-flex items-center gap-1">
+                    <XCircle className="size-3.5 shrink-0" />
                     {donationStatus === "canceled_by_donor"
                       ? "Canceled by donor"
                       : "Canceled by requester"}
                   </span>
                 ) : isDonorConfirmed ? (
-                  <span className="flex items-center gap-1 text-blue-500">
-                    <CheckCircle2 className="size-3.5" />
+                  <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                    <CheckCircle2 className="size-3.5 shrink-0" />
                     Donor confirmed
                   </span>
                 ) : isRequesterConfirmed ? (
-                  <span className="flex items-center gap-1 text-blue-500">
-                    <CheckCircle2 className="size-3.5" />
+                  <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                    <CheckCircle2 className="size-3.5 shrink-0" />
                     Requester confirmed
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-amber-500">
-                    <Clock3 className="size-3.5" />
+                  <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                    <Clock3 className="size-3.5 shrink-0" />
                     Awaiting confirmation
                   </span>
                 )}

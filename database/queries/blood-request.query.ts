@@ -296,12 +296,15 @@ interface PopulatedAssignment {
  * @param {string} requestId - The ID of the blood request to fetch.
  * @returns {Promise<BloodRequestDetailData | null>} A promise that resolves to the detailed blood request data or null if not found.
  */
+
 export async function getBloodRequestById(
   requestId: string,
 ): Promise<BloodRequestDetailData | null> {
+  // Fetch the current user once to calculate viewer-specific permissions.
   const currentUser = await getCurrentUser();
   const currentUserId = currentUser?.id;
 
+  // Populate only the fields required by the blood request details UI.
   const bloodRequest = await BloodRequest.findById(requestId)
     .populate({
       path: "requester",
@@ -313,54 +316,99 @@ export async function getBloodRequestById(
     })
     .populate({
       path: "assignedDonors.donor",
-      select: "name username image bloodGroup phone  location",
+      select: "name username image bloodGroup phone location",
     })
     .lean();
 
+  // Return null when the request does not exist.
   if (!bloodRequest) return null;
 
+  // Normalize MongoDB IDs before returning data to the UI.
   const requester = replaceMongoIdInObject(
     bloodRequest.requester as PopulatedRequester,
   );
 
+  // A valid requester is required to render the request details.
   if (!requester) return null;
 
-  const interestedDonors = replaceMongoIdInArray(
-    bloodRequest.interestedDonors as PopulatedDonor[],
-  ) as BloodRequestDetailDonor[];
+  // Use a Set for efficient following checks across all displayed users.
+  const followingIds = new Set(
+    (currentUser?.following ?? []).map((userId) => userId.toString()),
+  );
 
+  // Calculate whether the current user follows the requester.
+  const isFollowing =
+    !!currentUserId &&
+    requester.id !== currentUserId &&
+    followingIds.has(requester.id);
+
+  // Normalize interested donors and attach viewer-specific UI flags.
+  const interestedDonors = (
+    replaceMongoIdInArray(
+      bloodRequest.interestedDonors as PopulatedDonor[],
+    ) as BloodRequestDetailDonor[]
+  ).map((donor) => ({
+    ...donor,
+    isFollowing:
+      !!currentUserId &&
+      donor.id !== currentUserId &&
+      followingIds.has(donor.id),
+    isYou: !!currentUserId && donor.id === currentUserId,
+  }));
+
+  // Normalize assigned donors and attach the same UI flags.
+  // Keep this mapping consistent with the interested donors mapping.
   const assignedDonors = (
     bloodRequest.assignedDonors as PopulatedAssignment[]
-  ).map((assignment) => ({
-    ...assignment,
-    donor: replaceMongoIdInObject(assignment.donor)!,
-  })) as BloodRequestAssignment[];
+  ).flatMap((assignment) => {
+    // Skip assignments whose donor reference could not be populated.
+    if (!assignment.donor) return [];
 
-  const isOwner = currentUserId ? requester.id === currentUserId : false;
+    const donor = replaceMongoIdInObject(assignment.donor);
 
-  const isInterested = currentUserId
-    ? (bloodRequest.interestedDonors as PopulatedDonor[]).some(
-        (donor) => donor._id.toString() === currentUserId,
-      )
-    : false;
+    if (!donor) return [];
 
-  const isAssigned = currentUserId
-    ? (bloodRequest.assignedDonors as PopulatedAssignment[]).some(
-        (assignment) => assignment.donor._id.toString() === currentUserId,
-      )
-    : false;
+    return [
+      {
+        ...assignment,
+        donor: {
+          ...donor,
+          isFollowing:
+            !!currentUserId &&
+            donor.id !== currentUserId &&
+            followingIds.has(donor.id),
+          isYou: !!currentUserId && donor.id === currentUserId,
+        },
+      },
+    ];
+  }) as BloodRequestAssignment[];
 
+  // These flags control which actions the current viewer can access.
+  const isOwner = !!currentUserId && requester.id === currentUserId;
+
+  const isInterested =
+    !!currentUserId &&
+    (bloodRequest.interestedDonors as PopulatedDonor[]).some(
+      (donor) => donor._id.toString() === currentUserId,
+    );
+
+  const isAssigned =
+    !!currentUserId &&
+    (bloodRequest.assignedDonors as PopulatedAssignment[]).some(
+      (assignment) => assignment.donor?._id?.toString() === currentUserId,
+    );
+
+  // Return normalized request data together with the viewer-specific flags.
   return {
     ...replaceMongoIdInObject(bloodRequest),
     requester,
-
     interestedDonors,
     assignedDonors,
     interestedCount: interestedDonors.length,
     assignedCount: assignedDonors.length,
-
     currentUserId,
     isOwner,
+    isFollowing,
     isInterested,
     isAssigned,
   } as BloodRequestDetailData;

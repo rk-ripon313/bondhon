@@ -11,6 +11,7 @@ import {
   toggleBloodRequestInterest,
 } from "@/app/actions/blood-request/blood-request-donor.action";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import FollowToggle from "@/components/shared/FollowToggle";
 import { Button } from "@/components/ui/button";
 import { formatBDPhone } from "@/lib/helpers/phone";
 import { BloodRequestDetailDonor } from "@/types/blood-request.type";
@@ -73,26 +74,41 @@ export default function InterestedDonorRow({
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <DonorAvatar donor={donor} />
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="truncate text-sm font-medium">{donor.name}</p>
+            <div className="min-w-0 flex-1">
+              {/* Donor name and follow action */}
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <Link
+                  href={`/user/${donor.username}`}
+                  className="min-w-0 truncate text-sm font-semibold text-app-foreground transition hover:text-app-primary"
+                >
+                  {donor.name}
+                </Link>
 
-                {isCurrentUser && (
-                  <span className="shrink-0 rounded-full bg-app-primary/10 px-2 py-0.5 text-[11px] font-medium text-app-primary">
+                {isCurrentUser ? (
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     You
                   </span>
+                ) : (
+                  <FollowToggle
+                    username={donor.username}
+                    isFollowing={donor.isFollowing}
+                    className="shrink-0"
+                  />
                 )}
               </div>
 
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="font-medium text-app-primary">
+              {/* Blood group and location */}
+              <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                <span className="font-semibold text-app-primary">
                   {donor.bloodGroup}
                 </span>
 
                 {donor.location?.area && (
                   <>
-                    <span>•</span>
-                    <span className="truncate">{donor.location.area}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="max-w-full truncate">
+                      {donor.location.area}
+                    </span>
                   </>
                 )}
               </div>

@@ -67,8 +67,8 @@ export function BloodRequestHero({
         </div>
 
         {/* Summary info */}
-        <div className="flex justify-between gap-4 sm:justify-start">
-          <div className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-muted/30 px-3 py-2.5">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+          <div className="flex min-w-0 items-start gap-3 rounded-xl border border-border bg-muted/30 px-3 py-3">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground [&>svg]:size-4">
               <MapPin />
             </span>
@@ -76,23 +76,21 @@ export function BloodRequestHero({
             <div className="min-w-0">
               <p className="text-[11px] text-muted-foreground">Location</p>
 
-              <p className="truncate text-sm font-medium">
+              <p className="text-sm font-medium leading-relaxed break-words">
                 {formatLocation(request.location)}
               </p>
             </div>
           </div>
 
-          <div className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-muted/30 px-3 py-2.5">
+          <div className="flex min-w-0 items-start gap-3 rounded-xl border border-border bg-muted/30 px-3 py-3">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground [&>svg]:size-4">
               <CalendarDays />
             </span>
 
             <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground">
-                Needed before{" "}
-              </p>
+              <p className="text-[11px] text-muted-foreground">Needed before</p>
 
-              <p className="truncate text-sm font-medium">
+              <p className="text-sm font-medium leading-relaxed break-words">
                 {formatDateTime(request.neededBefore)}
               </p>
             </div>

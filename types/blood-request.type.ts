@@ -60,6 +60,8 @@ export interface BloodRequestDetailDonor {
   bloodGroup: string;
   phone: string;
   location: LocationData;
+  isFollowing: boolean;
+  isYou: boolean;
 }
 
 export interface BloodRequestAssignment {

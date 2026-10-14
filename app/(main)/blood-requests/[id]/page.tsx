@@ -40,6 +40,8 @@ export default async function BloodRequestDetailsPage({
             <BloodRequestRequester
               requester={request.requester}
               contactNumber={request.contactNumber}
+              isOwner={request.isOwner}
+              isFollowing={request.isFollowing}
             />
 
             <BloodRequestActions
@@ -69,6 +71,8 @@ export default async function BloodRequestDetailsPage({
             <BloodRequestRequester
               requester={request.requester}
               contactNumber={request.contactNumber}
+              isOwner={request.isOwner}
+              isFollowing={request.isFollowing}
             />
 
             <BloodRequestActions
