@@ -25,7 +25,7 @@ import { Types } from "mongoose";
 export async function getBloodRequests({
   search,
   bloodGroup,
-  status,
+  status = "active",
   urgency,
   sort = "newest",
   lat,
@@ -208,6 +208,7 @@ export async function getBloodRequests({
       username: string;
       image: string;
     };
+
     const requestData = { ...request };
 
     delete requestData.interestedDonors;
@@ -235,6 +236,14 @@ export async function getBloodRequests({
       isOwner: currentUserId
         ? requester?._id.toString() === currentUserId
         : false,
+
+      isFollowing:
+        !!currentUserId &&
+        !!requester &&
+        requester._id.toString() !== currentUserId &&
+        (currentUser?.following ?? []).some(
+          (userId) => userId.toString() === requester._id.toString(),
+        ),
 
       currentUserId,
     };

@@ -2,6 +2,7 @@
 
 import { Building2, Clock3, MapPin } from "lucide-react";
 
+import FollowToggle from "@/components/shared/FollowToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDateTime, getTimeAgo } from "@/lib/helpers/date";
 import { formatLocation } from "@/lib/helpers/location-format";
@@ -47,6 +48,14 @@ export default function BloodRequestCard({
               <p className="truncate text-sm font-semibold text-app-foreground">
                 {requesterName}
               </p>
+
+              {!request.isOwner && (
+                <FollowToggle
+                  username={request.requester.username}
+                  isFollowing={request.isFollowing}
+                  className="shrink-0"
+                />
+              )}
             </div>
 
             <div className="mt-0.5 text-xs text-muted-foreground">

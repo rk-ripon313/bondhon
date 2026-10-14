@@ -31,7 +31,7 @@ export default function BloodRequestFilters() {
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
 
   const bloodGroup = searchParams.get("bloodGroup") ?? "all";
-  const status = searchParams.get("status") ?? "all";
+  const status = searchParams.get("status") ?? "active";
   const urgency = searchParams.get("urgency") ?? "all";
 
   const sortParam = searchParams.get("sort");
@@ -126,7 +126,7 @@ export default function BloodRequestFilters() {
   };
 
   return (
-    <section className="mb-8 rounded-xl border border-border bg-card/40 p-3">
+    <section className="mb-8 rounded-xl border border-border bg-app-card/40 p-3">
       {/* Top Row */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_170px_170px]">
         {/* Search */}

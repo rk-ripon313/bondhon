@@ -20,7 +20,7 @@ export default function BloodRequestsLoading() {
 
       {/* Filters */}
       <section className="mb-7">
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-xl border border-border bg-app-card p-4">
           <div className="space-y-4">
             <Skeleton className="h-10 w-full" />
 
@@ -52,7 +52,7 @@ export default function BloodRequestsLoading() {
 
 function BloodRequestCardSkeleton() {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border bg-app-card p-5">
       {/* User */}
       <div className="flex items-center gap-3">
         <Skeleton className="size-10 rounded-full" />
