@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Search, X } from "lucide-react";
+import { LoaderCircle, MapPin, Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -29,6 +29,7 @@ export default function BloodRequestFilters() {
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [isFindingLocation, setIsFindingLocation] = useState(false);
 
   const bloodGroup = searchParams.get("bloodGroup") ?? "all";
   const status = searchParams.get("status") ?? "active";
@@ -44,14 +45,16 @@ export default function BloodRequestFilters() {
   const hasActiveFilters =
     search.trim() !== "" ||
     bloodGroup !== "all" ||
-    status !== "all" ||
+    status !== "active" ||
     urgency !== "all" ||
     sortBy !== "newest";
 
   const updateParam = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    if (!value || value === "all") {
+    if (key === "status" && value === "all") {
+      params.set("status", "all");
+    } else if (!value || value === "all") {
       params.delete(key);
     } else {
       params.set(key, value);
@@ -66,13 +69,18 @@ export default function BloodRequestFilters() {
 
   const debouncedSearch = debounce((value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value) {
+
+    if (value.trim()) {
       params.set("search", value);
     } else {
       params.delete("search");
     }
+
     params.delete("page");
-    router.push(`${pathname}?${params.toString()}`);
+
+    router.replace(`${pathname}?${params.toString()}`, {
+      scroll: false,
+    });
   }, 400);
 
   const handleSearchChange = (value: string) => {
@@ -98,18 +106,18 @@ export default function BloodRequestFilters() {
   };
 
   const handleFindNearby = async () => {
+    if (isFindingLocation) return;
+
+    setIsFindingLocation(true);
+
     try {
       const location = await findMe();
 
-      if (!location?.coordinates) {
-        return;
-      }
+      if (!location?.coordinates) return;
 
       const [lng, lat] = location.coordinates.coordinates;
 
-      if (typeof lat !== "number" || typeof lng !== "number") {
-        return;
-      }
+      if (typeof lat !== "number" || typeof lng !== "number") return;
 
       const params = new URLSearchParams(searchParams.toString());
 
@@ -122,27 +130,30 @@ export default function BloodRequestFilters() {
       });
     } catch (error) {
       console.warn("Failed to find nearby location:", error);
+    } finally {
+      setIsFindingLocation(false);
     }
   };
 
   return (
     <section className="mb-8 rounded-xl border border-border bg-app-card/40 p-3">
       {/* Top Row */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_170px_170px]">
+      <div className="grid min-w-0 grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_170px_170px]">
         {/* Search */}
-        <div className="relative">
+        <div className="relative min-w-0">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
           <Input
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search blood requests..."
-            className={`${CONTROL_CLASS} pl-9 pr-9`}
+            className={`${CONTROL_CLASS} min-w-0 pl-9 pr-9`}
           />
 
           {search && (
             <button
               type="button"
+              aria-label="Clear search"
               onClick={() => handleSearchChange("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             >
@@ -156,10 +167,16 @@ export default function BloodRequestFilters() {
           type="button"
           variant="outline"
           onClick={handleFindNearby}
-          className={`${CONTROL_CLASS} cursor-pointer`}
+          disabled={isFindingLocation}
+          className={`${CONTROL_CLASS} cursor-pointer disabled:cursor-not-allowed`}
         >
-          <MapPin className="size-4" />
-          Use my location
+          {isFindingLocation ? (
+            <LoaderCircle className="size-4 animate-spin" />
+          ) : (
+            <MapPin className="size-4" />
+          )}
+
+          {isFindingLocation ? "Finding location..." : "Use my location"}
         </Button>
 
         {/* Sort */}
@@ -197,7 +214,7 @@ export default function BloodRequestFilters() {
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="all">Blood Group</SelectItem>
+            <SelectItem value="all">All blood groups</SelectItem>
 
             {BLOOD_GROUPS.map((group) => (
               <SelectItem key={group} value={group}>
@@ -217,7 +234,7 @@ export default function BloodRequestFilters() {
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="all">Status</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
 
             {REQUEST_STATUSES.map((item) => (
               <SelectItem key={item} value={item}>
@@ -237,7 +254,7 @@ export default function BloodRequestFilters() {
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="all">Urgency</SelectItem>
+            <SelectItem value="all">All urgencies</SelectItem>
 
             {REQUEST_URGENCY.map((item) => (
               <SelectItem key={item} value={item}>
@@ -247,7 +264,7 @@ export default function BloodRequestFilters() {
           </SelectContent>
         </Select>
 
-        {/* Clear */}
+        {/* Clear Filters */}
         <Button
           type="button"
           variant="outline"

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { getBloodRequests } from "@/database/queries/blood-request.query";
 
 import BloodRequestFilters from "@/components/blood-request/BloodRequestFilters";
-import BloodRequestPagination from "@/components/blood-request/BloodRequestPagination";
 import BloodRequestCard from "@/components/blood-request/card/BloodRequestCard";
 import EmptyState from "@/components/shared/EmptyState";
 import LocationInitializer from "@/components/shared/LocationInitializer";
+import Pagination from "@/components/shared/Pagination";
 import { Button } from "@/components/ui/button";
 import { GetBloodRequestsParams } from "@/types/blood-request.type";
 
@@ -83,10 +83,7 @@ export default async function BloodRequestsPage({
               </div>
 
               {/*  pagination UI */}
-              <BloodRequestPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-              />
+              <Pagination currentPage={currentPage} totalPages={totalPages} />
             </>
           ) : (
             <EmptyState

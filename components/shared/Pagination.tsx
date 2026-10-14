@@ -4,11 +4,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-type PaginationProps = {
+interface PaginationProps {
   currentPage?: number;
   totalPages?: number;
-};
+}
 
 export default function Pagination({
   currentPage = 1,
@@ -67,7 +68,7 @@ export default function Pagination({
       <Button
         variant="outline"
         size="icon"
-        className="size-9 rounded-lg border-border bg-app-background hover:bg-muted"
+        className="size-9 rounded-lg border-border bg-app-background hover:bg-muted cursor-pointer"
         disabled={currentPage === 1}
         onClick={() => goToPage(currentPage - 1)}
       >
@@ -84,11 +85,12 @@ export default function Pagination({
               key={page}
               variant="outline"
               size="icon"
-              className={
+              className={cn(
+                "size-9 rounded-lg cursor-pointer",
                 isActive
-                  ? "size-9 rounded-lg border-app-primary bg-app-primary text-white hover:bg-app-primary/90"
-                  : "size-9 rounded-lg border-border bg-app-background hover:bg-muted"
-              }
+                  ? "!border-app-primary !bg-app-primary text-white hover:!bg-app-primary/90"
+                  : "border-border bg-app-background hover:bg-muted",
+              )}
               onClick={() => goToPage(page)}
               aria-current={isActive ? "page" : undefined}
             >
@@ -101,7 +103,7 @@ export default function Pagination({
       <Button
         variant="outline"
         size="icon"
-        className="size-9 rounded-lg border-border bg-app-background hover:bg-muted"
+        className="size-9 rounded-lg border-border bg-app-background hover:bg-muted cursor-pointer"
         disabled={currentPage === totalPages}
         onClick={() => goToPage(currentPage + 1)}
       >
