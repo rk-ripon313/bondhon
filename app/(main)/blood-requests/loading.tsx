@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BloodRequestsLoading() {
   return (
-    <div className="min-h-screen bg-app-background mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <section className="mb-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

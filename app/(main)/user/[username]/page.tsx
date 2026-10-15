@@ -39,23 +39,21 @@ export default async function UserProfilePage({
   });
 
   return (
-    <div className="min-h-screen w-full bg-app-background px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-7">
-      <div className="space-y-5 mx-auto w-full max-w-7xl">
-        {/* Profile Hero */}
-        <UserProfileHero user={user} />
+    <div className="mx-auto w-full max-w-7xl space-y-5 px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-7">
+      {/* Profile Hero */}
+      <UserProfileHero user={user} />
 
-        <section className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-          {/* Activity */}
-          <UserActivityTabs
-            requests={requests}
-            currentPage={currentPage}
-            totalPages={totalPages}
-          />
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        {/* Activity */}
+        <UserActivityTabs
+          requests={requests}
+          currentPage={currentPage}
+          totalPages={totalPages}
+        />
 
-          {/* Sidebar */}
-          <UserSidebar user={user} />
-        </section>
-      </div>
+        {/* Sidebar */}
+        <UserSidebar user={user} />
+      </section>
     </div>
   );
 }

@@ -16,11 +16,13 @@ export default async function MainLayout({
 
   const user: SessionUser | null = session?.user ?? null;
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-app-background">
       <Navbar user={user} />
-      <main className="flex-1">{children}</main>
+
+      <main className="w-full flex-1">{children}</main>
+
       <CreateAction />
       <Footer />
-    </>
+    </div>
   );
 }

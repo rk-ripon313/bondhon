@@ -28,7 +28,7 @@ export default async function BloodRequestsPage({
   });
 
   return (
-    <div className="min-h-screen w-full bg-app-background px-4 py-8 sm:px-6 lg:px-8">
+    <div className="px-4 py-8 sm:px-6 lg:px-8">
       <LocationInitializer />
       <div className="mx-auto w-full max-w-7xl">
         {/* Header */}

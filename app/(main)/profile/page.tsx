@@ -31,27 +31,25 @@ export default async function ProfilePage({
   });
 
   return (
-    <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
-      <div className="space-y-6">
-        {/* Profile Header */}
-        <ProfileHero user={user} />
+    <div className="mx-auto w-full max-w-7xl space-y-5 px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-7">
+      {/* Profile Header */}
+      <ProfileHero user={user} />
 
-        {/* Profile Information */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <PersonalInfoCard user={editUser} />
-          <MedicalProfileCard user={editUser} />
-        </div>
-
-        {/* Location */}
-        <LocationCard user={editUser} />
-
-        {/* User Activity */}
-        <UserActivityTabs
-          requests={requests}
-          currentPage={currentPage}
-          totalPages={totalPages}
-        />
+      {/* Profile Information */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <PersonalInfoCard user={editUser} />
+        <MedicalProfileCard user={editUser} />
       </div>
-    </section>
+
+      {/* Location */}
+      <LocationCard user={editUser} />
+
+      {/* User Activity */}
+      <UserActivityTabs
+        requests={requests}
+        currentPage={currentPage}
+        totalPages={totalPages}
+      />
+    </div>
   );
 }

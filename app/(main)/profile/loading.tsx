@@ -111,8 +111,7 @@ function ActivitySkeleton() {
 
 export default function ProfileLoading() {
   return (
-    <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
-      <div className="space-y-6">
+   <div className="mx-auto w-full max-w-7xl space-y-5 px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-7">
         {/* Profile Hero */}
         <ProfileHeroSkeleton />
 
@@ -127,7 +126,7 @@ export default function ProfileLoading() {
 
         {/* User Activity */}
         <ActivitySkeleton />
-      </div>
-    </section>
+     
+    </div>
   );
 }
