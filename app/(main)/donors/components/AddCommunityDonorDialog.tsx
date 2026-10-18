@@ -1,6 +1,6 @@
 "use client";
 
-import { UserPlus } from "lucide-react";
+import { Droplet, UserPlus } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import CommunityDonorForm from "./CommunityDonorForm";
 
 export default function AddCommunityDonorDialog() {
   const [open, setOpen] = useState(false);
@@ -26,15 +27,24 @@ export default function AddCommunityDonorDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add Community Donor</DialogTitle>
-          <DialogDescription>
-            Add a local donor to help others find blood when needed.
-          </DialogDescription>
+      <DialogContent className="flex max-h-[min(680px,calc(100dvh-2rem))] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-2xl border-border bg-app-card p-0 text-app-foreground shadow-xl sm:max-w-lg">
+        <DialogHeader className="flex shrink-0 flex-row items-center gap-3 border-b border-border/50 px-5 py-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-500/10 dark:bg-rose-500/20">
+            <Droplet className="size-5 text-rose-600 dark:text-rose-400" />
+          </div>
+
+          <div className="space-y-0.5">
+            <DialogTitle className="text-lg font-bold">
+              Add Community Donor
+            </DialogTitle>
+
+            <DialogDescription className="text-xs text-muted-foreground">
+              Add a local donor to help others find blood when needed.
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
-        {/* Form */}
+        <CommunityDonorForm closeOpen={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   );
