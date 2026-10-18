@@ -5,30 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { formatLocation } from "@/lib/helpers/location-format";
+import { CommunityDonorType } from "@/types/donor.type";
 import { Copy } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-interface CommunityDonorData {
-  id: string;
-  name: string;
-  phone: string;
-  bloodGroup: string;
-  location: {
-    district: string;
-    area: string;
-    address?: string;
-  };
-  addedBy: {
-    name: string;
-    username: string;
-  };
-}
-
 export default function CommunityDonorCard({
   donor,
 }: {
-  donor: CommunityDonorData;
+  donor: CommunityDonorType;
 }) {
   const handleCopyPhone = async () => {
     try {

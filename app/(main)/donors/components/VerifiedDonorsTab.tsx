@@ -3,7 +3,8 @@ import { User } from "lucide-react";
 import EmptyState from "@/components/shared/EmptyState";
 import Pagination from "@/components/shared/Pagination";
 import { getDonors } from "@/database/queries/donor.query";
-import { GetDonorsParams } from "@/types/user.type";
+
+import { GetDonorsParams } from "@/types/donor.type";
 import DonorFilters from "./DonorFilters";
 import VerifiedDonorCard from "./VerifiedDonorCard";
 

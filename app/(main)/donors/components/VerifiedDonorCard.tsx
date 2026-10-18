@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/lib/helpers/formet-text";
 import { formatLocation } from "@/lib/helpers/location-format";
-import { VerifiedDonor } from "@/types/user.type";
+import { VerifiedDonor } from "@/types/donor.type";
 
 export default function VerifiedDonorCard({
   verifiedDonor,

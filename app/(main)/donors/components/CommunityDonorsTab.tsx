@@ -1,108 +1,29 @@
 import { Users } from "lucide-react";
 
 import EmptyState from "@/components/shared/EmptyState";
-import { GetDonorsParams } from "@/types/user.type";
 
+import Pagination from "@/components/shared/Pagination";
 import { Badge } from "@/components/ui/badge";
+import { getCommunityDonors } from "@/database/queries/donor.query";
+import { GetDonorsParams } from "@/types/donor.type";
 import AddCommunityDonorDialog from "./AddCommunityDonorDialog";
 import CommunityDonorCard from "./CommunityDonorCard";
 import DonorFilters from "./DonorFilters";
 
-const communityDonorsMock = [
-  {
-    id: "community-1",
-    name: "Tanvir Ahmed",
-    phone: "01700000001",
-    bloodGroup: "A+",
-    location: {
-      district: "Sylhet",
-      area: "Zindabazar",
-      address: "Near Zindabazar Point",
-    },
-    addedBy: {
-      name: "rion",
-      username: "ripon123",
-    },
-  },
-  {
-    id: "community-2",
-    name: "Sabbir Hossain",
-    phone: "01700000002",
-    bloodGroup: "O+",
-    location: {
-      district: "Sylhet",
-      area: "Beanibazar",
-    },
-    addedBy: {
-      name: "rion",
-      username: "ripon123",
-    },
-  },
-  {
-    id: "community-3",
-    name: "Nusrat Jahan",
-    phone: "01700000003",
-    bloodGroup: "B+",
-    location: {
-      district: "Sylhet",
-      area: "South Surma",
-      address: "Near South Surma Bus Stand",
-    },
-    addedBy: {
-      name: "rion",
-      username: "ripon123",
-    },
-  },
-  {
-    id: "community-4",
-    name: "Mahmudul Hasan",
-    phone: "01700000004",
-    bloodGroup: "AB+",
-    location: {
-      district: "Moulvibazar",
-      area: "Sreemangal",
-    },
-    addedBy: {
-      name: "rion",
-      username: "ripon123",
-    },
-  },
-  {
-    id: "community-5",
-    name: "Arif Rahman",
-    phone: "01700000005",
-    bloodGroup: "O-",
-    location: {
-      district: "Habiganj",
-      area: "Habiganj Sadar",
-    },
-    addedBy: {
-      name: "rion",
-      username: "ripon123",
-    },
-  },
-  {
-    id: "community-6",
-    name: "Farhana Akter",
-    phone: "01700000006",
-    bloodGroup: "A-",
-    location: {
-      district: "Sylhet",
-      area: "Golapganj",
-    },
-    addedBy: {
-      name: "rion",
-      username: "ripon123",
-    },
-  },
-];
-
-export default function CommunityDonorsTab({
+export default async function CommunityDonorsTab({
   filters,
 }: {
   filters: GetDonorsParams;
 }) {
-  const totalCount = 6;
+  const currentPage = Number(filters.page) || 1;
+  const itemsPerPage = 9;
+
+  const { communityDonors, totalPages, totalCount } = await getCommunityDonors({
+    ...filters,
+    page: currentPage,
+    itemsPerPage,
+  });
+
   return (
     <div className="space-y-6">
       <DonorFilters />
@@ -127,16 +48,16 @@ export default function CommunityDonorsTab({
         <AddCommunityDonorDialog />
       </div>
 
-      {communityDonorsMock.length > 0 ? (
+      {communityDonors.length > 0 ? (
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {communityDonorsMock.map((donor) => (
+            {communityDonors.map((donor) => (
               <CommunityDonorCard key={donor.id} donor={donor} />
             ))}
           </div>
-          {/* {totalPages > 1 && (
-                    <Pagination currentPage={currentPage} totalPages={totalPages} />
-                  )} */}
+          {totalPages > 1 && (
+            <Pagination currentPage={currentPage} totalPages={totalPages} />
+          )}
         </>
       ) : (
         <EmptyState

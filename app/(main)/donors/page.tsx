@@ -1,6 +1,7 @@
 import LocationInitializer from "@/components/shared/LocationInitializer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GetDonorsParams } from "@/types/user.type";
+
+import { GetDonorsParams } from "@/types/donor.type";
 import { HeartHandshake, ShieldCheck, Users } from "lucide-react";
 import CommunityDonorsTab from "./components/CommunityDonorsTab";
 import VerifiedDonorsTab from "./components/VerifiedDonorsTab";
