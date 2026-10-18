@@ -24,7 +24,7 @@ const CONTROL_CLASS =
 export default function DonorFilters({
   showAvailableToggle = false,
 }: {
-  showAvailableToggle: boolean;
+  showAvailableToggle?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -174,8 +174,16 @@ export default function DonorFilters({
           <Input
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Name or username..."
-            aria-label="Search donor name or username"
+            placeholder={
+              showAvailableToggle
+                ? "Search by name or username..."
+                : "Search by name or location..."
+            }
+            aria-label={
+              showAvailableToggle
+                ? "Search by name or username..."
+                : "Search by name or location..."
+            }
             className={`${CONTROL_CLASS} pl-9 pr-9`}
           />
 
@@ -219,7 +227,7 @@ export default function DonorFilters({
                     availableOnly: checked === true ? "true" : "",
                   })
                 }
-                className="size-4"
+                className="size-4 data-[state=checked]:border-emerald-600 data-[state=checked]:bg-emerald-600 data-[state=checked]:text-white"
               />
               Available only
             </label>

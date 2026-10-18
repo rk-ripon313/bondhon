@@ -2,6 +2,7 @@ import LocationInitializer from "@/components/shared/LocationInitializer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GetDonorsParams } from "@/types/user.type";
 import { HeartHandshake, ShieldCheck, Users } from "lucide-react";
+import CommunityDonorsTab from "./components/CommunityDonorsTab";
 import VerifiedDonorsTab from "./components/VerifiedDonorsTab";
 
 export const metadata = {
@@ -57,6 +58,7 @@ export default async function DonorsPage({
             Community
           </TabsTrigger>
         </TabsList>
+
         <TabsContent
           value="verified"
           className="mt-0 space-y-6 focus-visible:outline-none"
@@ -66,16 +68,9 @@ export default async function DonorsPage({
 
         <TabsContent
           value="community"
-          className="mt-0 focus-visible:outline-none"
+          className="mt-0 space-y-6 focus-visible:outline-none"
         >
-          <div className="rounded-xl border border-dashed border-border px-5 py-12 text-center">
-            <Users className="mx-auto size-8 text-app-muted" />
-            <h2 className="mt-3 font-semibold">Community Donors</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-app-muted">
-              We are working on a community directory to help you discover more
-              potential blood donors.
-            </p>
-          </div>
+          <CommunityDonorsTab filters={params} />
         </TabsContent>
       </Tabs>
     </div>
