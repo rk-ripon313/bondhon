@@ -3,7 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { GetDonorsParams } from "@/types/donor.type";
 import { HeartHandshake, ShieldCheck, Users } from "lucide-react";
+import { Suspense } from "react";
 import CommunityDonorsTab from "./components/CommunityDonorsTab";
+import {
+  CommunityDonorsSkeleton,
+  VerifiedDonorsSkeleton,
+} from "./components/DonorLoadingSkeletons";
 import VerifiedDonorsTab from "./components/VerifiedDonorsTab";
 
 export const metadata = {
@@ -64,14 +69,18 @@ export default async function DonorsPage({
           value="verified"
           className="mt-0 space-y-6 focus-visible:outline-none"
         >
-          <VerifiedDonorsTab filters={params} />
+          <Suspense fallback={<VerifiedDonorsSkeleton />}>
+            <VerifiedDonorsTab filters={params} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent
           value="community"
           className="mt-0 space-y-6 focus-visible:outline-none"
         >
-          <CommunityDonorsTab filters={params} />
+          <Suspense fallback={<CommunityDonorsSkeleton />}>
+            <CommunityDonorsTab filters={params} />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
