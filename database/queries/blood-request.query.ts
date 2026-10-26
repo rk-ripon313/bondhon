@@ -1,4 +1,6 @@
+import { BLOOD_GROUPS } from "@/constants";
 import { getCurrentUser } from "@/database/queries/user.query";
+import { isBloodGroupCompatible } from "@/lib/blood/blood-group";
 import {
   replaceMongoIdInArray,
   replaceMongoIdInObject,
@@ -52,7 +54,15 @@ export async function getBloodRequests({
 
   // Blood Group
   if (bloodGroup && bloodGroup !== "all") {
+    // Explicit filter: show only the selected blood group
     filter.bloodGroupNeeded = bloodGroup;
+  } else if (currentUser?.bloodGroup) {
+    // Default recommendation: show compatible blood requests
+    filter.bloodGroupNeeded = {
+      $in: BLOOD_GROUPS.filter((group) =>
+        isBloodGroupCompatible(currentUser.bloodGroup, group),
+      ),
+    };
   }
 
   // Status
