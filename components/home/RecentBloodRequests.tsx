@@ -20,7 +20,7 @@ export default async function RecentBloodRequests({
   lng,
 }: Pick<GetBloodRequestsParams, "lat" | "lng">) {
   const { requests } = await getBloodRequests({
-    status: "all",
+    status: "active",
     sort: "newest",
     page: 1,
     itemsPerPage: 6,
