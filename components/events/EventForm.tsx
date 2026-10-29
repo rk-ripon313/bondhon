@@ -1,6 +1,6 @@
 "use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
+import imageCompression from "browser-image-compression";
 import {
   CalendarDays,
   ImagePlus,
@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/select";
 import { EVENT_CATEGORIES } from "@/constants";
 
+import { createEvent } from "@/app/actions/event/event.action";
+import { uploadFileToCloudinary } from "@/lib/helpers/cloudinary-upload";
 import { debounce } from "@/lib/helpers/debounce";
 import { getErrorMessage } from "@/lib/helpers/error";
 import { findMe } from "@/lib/location/find-me";
@@ -63,7 +65,7 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<EventFormInput>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
@@ -202,9 +204,45 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
     );
   };
 
-  const onSubmit = async (_data: EventFormInput) => {
-    // UI stage only. Cloudinary upload and server action will be connected next.
-    toast.info("Event creation will be connected in the next step.");
+  const onSubmit = async (data: EventFormInput) => {
+    try {
+      let thumbnail: string | undefined;
+
+      if (coverFile) {
+        //  Compress image
+        const compressedFile = await imageCompression(coverFile, {
+          maxSizeMB: 1,
+          useWebWorker: true,
+        });
+
+        //  Upload to Cloudinary
+        const uploadedThumbnail = await uploadFileToCloudinary({
+          files: compressedFile,
+          fileType: "image",
+          subFolder: "Events",
+        });
+
+        thumbnail = Array.isArray(uploadedThumbnail)
+          ? uploadedThumbnail[0]
+          : uploadedThumbnail;
+
+        if (!thumbnail) {
+          throw new Error("Image upload failed.");
+        }
+      }
+      const result = await createEvent({ ...data, thumbnail });
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Event  Error", error);
+      toast.error(getErrorMessage(error));
+    }
   };
 
   return (
@@ -525,11 +563,6 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
                 {errors.location.area.message}
               </p>
             )}
-            {errors.location?.district && (
-              <p className="text-[11px] text-destructive">
-                {errors.location.district.message}
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -635,7 +668,7 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
 
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !isDirty}
           className="min-w-32 cursor-pointer bg-emerald-600 text-xs font-semibold text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700"
         >
           {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
