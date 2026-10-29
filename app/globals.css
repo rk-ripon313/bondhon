@@ -193,3 +193,14 @@
     background: hsl(var(--muted-foreground) / 0.45);
   }
 }
+
+@keyframes fab-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(220 38 38 / 15%);
+  }
+
+  50% {
+    box-shadow: 0 0 12px 3px rgb(220 38 38 / 30%);
+  }
+}

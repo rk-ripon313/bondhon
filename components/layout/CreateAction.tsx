@@ -3,11 +3,14 @@
 import { CalendarPlus, Droplet, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import BloodRequestModal from "../blood-request/BloodRequestModal";
+import EventModal from "../events/EventModal";
 
 export default function CreateAction() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+
   const [bloodRequestModalOpen, setBloodRequestModalOpen] = useState(false);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -59,8 +62,13 @@ export default function CreateAction() {
   };
 
   const handleToggle = () => {
-    setIsPinned((prev) => !prev);
-    setIsOpen((prev) => !prev);
+    if (isPinned) {
+      setIsPinned(false);
+      setIsOpen(false);
+    } else {
+      setIsPinned(true);
+      setIsOpen(true);
+    }
   };
 
   const closeMenu = () => {
@@ -75,7 +83,7 @@ export default function CreateAction() {
 
   const handleCreateEventClick = () => {
     closeMenu();
-    // TODO: Event Modal or Navigation
+    setEventModalOpen(true);
   };
 
   return (
@@ -158,7 +166,9 @@ export default function CreateAction() {
           aria-expanded={isOpen}
           onClick={handleToggle}
           className={`flex size-12 items-center justify-center rounded-full bg-app-primary text-white shadow-xl ring-4 ring-app-primary/20 transition-all duration-300 hover:scale-105 active:scale-95 ${
-            isOpen ? "rotate-45 shadow-2xl ring-app-primary/10" : "rotate-0"
+            isOpen
+              ? "rotate-45 shadow-2xl ring-app-primary/10"
+              : "rotate-0 animate-[fab-glow_2.5s_ease-in-out_infinite]"
           }`}
         >
           <Plus className="size-6" />
@@ -170,6 +180,9 @@ export default function CreateAction() {
         open={bloodRequestModalOpen}
         onOpenChange={setBloodRequestModalOpen}
       />
+
+      {/* Event Modal */}
+      <EventModal open={eventModalOpen} onOpenChange={setEventModalOpen} />
     </>
   );
 }
