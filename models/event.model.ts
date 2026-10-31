@@ -12,8 +12,6 @@ const eventSchema = new Schema(
     category: { type: String, enum: EVENT_CATEGORIES, required: true },
     tags: { type: [String], default: [] },
 
-    eventDate: { type: Date, required: true },
-
     location: {
       district: { type: String },
       area: { type: String },
@@ -30,6 +28,15 @@ const eventSchema = new Schema(
           type: [Number], // [lng, lat]
         },
       },
+    },
+
+    startsAt: {
+      type: Date,
+      required: true,
+    },
+    endsAt: {
+      type: Date,
+      required: true,
     },
 
     status: { type: String, enum: EVENT_STATUS, default: "upcoming" },
