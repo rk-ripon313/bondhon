@@ -230,6 +230,8 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
           throw new Error("Image upload failed.");
         }
       }
+      console.log({ thumbnail });
+
       const result = await createEvent({ ...data, thumbnail });
 
       if (!result.success) {
@@ -425,9 +427,9 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
                 toast.error("Image size must be smaller than 5MB.");
                 return;
               }
+              setCoverFile(file);
 
               const imageUrl = URL.createObjectURL(file);
-
               setCoverPreview(imageUrl);
             }}
           />
