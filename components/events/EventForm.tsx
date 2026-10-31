@@ -73,7 +73,8 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
       description: "",
       category: undefined,
       tags: [],
-      eventDate: "",
+      startsAt: "",
+      endsAt: "",
       thumbnail: "",
       location: {
         area: "",
@@ -230,7 +231,6 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
           throw new Error("Image upload failed.");
         }
       }
-      console.log({ thumbnail });
 
       const result = await createEvent({ ...data, thumbnail });
 
@@ -276,7 +276,8 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Category */}
             <div className="space-y-2">
               <Label htmlFor="category" className="text-xs font-medium">
                 Category <span className="text-rose-500">*</span>
@@ -316,22 +317,48 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
               )}
             </div>
 
+            {/* Starts At */}
             <div className="space-y-2">
-              <Label htmlFor="eventDate" className="text-xs font-medium">
-                Date & Time <span className="text-rose-500">*</span>
+              <Label htmlFor="startsAt" className="text-xs font-medium">
+                Starts At <span className="text-rose-500">*</span>
               </Label>
+
               <div className="relative">
                 <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="eventDate"
+                  id="startsAt"
                   type="datetime-local"
-                  {...register("eventDate")}
+                  {...register("startsAt")}
                   className="h-10 w-full pl-9 text-sm"
                 />
               </div>
-              {errors.eventDate && (
+
+              {errors.startsAt && (
                 <p className="text-[11px] text-destructive">
-                  {errors.eventDate.message}
+                  {errors.startsAt.message}
+                </p>
+              )}
+            </div>
+
+            {/* Ends At */}
+            <div className="space-y-2">
+              <Label htmlFor="endsAt" className="text-xs font-medium">
+                Ends At <span className="text-rose-500">*</span>
+              </Label>
+
+              <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="endsAt"
+                  type="datetime-local"
+                  {...register("endsAt")}
+                  className="h-10 w-full pl-9 text-sm"
+                />
+              </div>
+
+              {errors.endsAt && (
+                <p className="text-[11px] text-destructive">
+                  {errors.endsAt.message}
                 </p>
               )}
             </div>

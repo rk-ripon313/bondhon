@@ -43,12 +43,28 @@ export async function createEvent(data: EventFormInput) {
 
     await dbConnect();
 
-    const eventDate = localDateTimeToUTC(validation.data.eventDate);
+    const startsAt = localDateTimeToUTC(validation.data.startsAt);
+    const endsAt = localDateTimeToUTC(validation.data.endsAt);
+
+    if (startsAt <= new Date()) {
+      return {
+        success: false,
+        message: "Event start date must be in the future.",
+      };
+    }
+
+    if (endsAt <= startsAt) {
+      return {
+        success: false,
+        message: "Event end date must be after the start date.",
+      };
+    }
 
     const event = await Event.create({
       ...validation.data,
+      startsAt,
+      endsAt,
       organizer: user.id,
-      eventDate,
       status: "upcoming",
     });
 
