@@ -11,3 +11,10 @@ export const getInitials = (name?: string) => {
     .join("")
     .toUpperCase();
 };
+
+// Format a string to have the first letter of each word capitalized
+export const formatLabel = (value: string) =>
+  value
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");

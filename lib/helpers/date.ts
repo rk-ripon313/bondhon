@@ -85,3 +85,27 @@ export const localDateTimeToUTC = (dateTime: string) => {
 export const utcToLocalDateTimeInput = (date: Date | string) => {
   return formatInTimeZone(date, APP_TIMEZONE, "yyyy-MM-dd'T'HH:mm");
 };
+
+/**
+ * Formats an event's start and end date in Bangladesh timezone.
+ */
+export const formatEventDateRange = (
+  startsAt: Date | string,
+  endsAt: Date | string,
+) => {
+  const startDate = formatInTimeZone(startsAt, APP_TIMEZONE, "yyyy-MM-dd");
+
+  const endDate = formatInTimeZone(endsAt, APP_TIMEZONE, "yyyy-MM-dd");
+
+  const sameDay = startDate === endDate;
+
+  const dateLabel = sameDay
+    ? formatInTimeZone(startsAt, APP_TIMEZONE, "MMM dd, yyyy")
+    : `${formatInTimeZone(startsAt, APP_TIMEZONE, "MMM dd")} – ${formatInTimeZone(endsAt, APP_TIMEZONE, "MMM dd, yyyy")}`;
+
+  const timeLabel = sameDay
+    ? `${formatInTimeZone(startsAt, APP_TIMEZONE, "hh:mm a")} – ${formatInTimeZone(endsAt, APP_TIMEZONE, "hh:mm a")}`
+    : `${formatInTimeZone(startsAt, APP_TIMEZONE, "MMM dd, hh:mm a")} – ${formatInTimeZone(endsAt, APP_TIMEZONE, "MMM dd, hh:mm a")}`;
+
+  return { dateLabel, timeLabel };
+};
