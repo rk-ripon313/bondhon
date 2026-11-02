@@ -23,7 +23,7 @@ import { getStatusStyles } from "@/lib/helpers/status";
 import { cn } from "@/lib/utils";
 import { EventCardData } from "@/types/event.type";
 import { toast } from "sonner";
-import EventActions from "./EventActions";
+import EventMoreActions from "./EventMoreActions";
 
 export default function EventCard({ event }: { event: EventCardData }) {
   const { dateLabel, timeLabel } = formatEventDateRange(
@@ -59,7 +59,8 @@ export default function EventCard({ event }: { event: EventCardData }) {
             {event.status}
           </Badge>
 
-          <EventActions event={event} />
+          {/* Event MoreActions dropdown */}
+          <EventMoreActions event={event} />
         </div>
       </div>
 
@@ -97,7 +98,6 @@ export default function EventCard({ event }: { event: EventCardData }) {
             </span>
           </div>
         </div>
-
         {/* Organizer + Participation Counts */}
         <div className="flex items-center gap-2 border-t border-border/60 pt-3">
           <Avatar className="size-8">

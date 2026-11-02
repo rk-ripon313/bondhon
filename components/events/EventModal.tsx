@@ -7,15 +7,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EventCardData } from "@/types/event.type";
 import { CalendarPlus } from "lucide-react";
 import EventForm from "./EventForm";
 
 interface EventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: "create" | "edit";
+  event?: EventCardData;
 }
 
-export default function EventModal({ open, onOpenChange }: EventModalProps) {
+export default function EventModal({
+  open,
+  onOpenChange,
+  mode = "create",
+  event,
+}: EventModalProps) {
+  const isEditMode = mode === "edit";
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[min(720px,calc(100vh-2rem))] w-[calc(100%-2rem)] !max-w-3xl flex-col gap-0 overflow-hidden rounded-2xl border-border bg-app-card p-0 text-app-foreground shadow-xl">
@@ -28,17 +37,19 @@ export default function EventModal({ open, onOpenChange }: EventModalProps) {
 
           <div className="space-y-0.5">
             <DialogTitle className="text-lg font-bold">
-              Create Event
+              {isEditMode ? "Edit Event" : "Create Event"}
             </DialogTitle>
 
             <DialogDescription className="text-xs text-muted-foreground">
-              Organize a community event and bring people together.
+              {isEditMode
+                ? "Update the details of your event."
+                : "Fill in the details to create a new event."}
             </DialogDescription>
           </div>
         </DialogHeader>
 
         {/* Form */}
-        <EventForm onOpenChange={onOpenChange} />
+        <EventForm mode={mode} onOpenChange={onOpenChange} event={event} />
       </DialogContent>
     </Dialog>
   );

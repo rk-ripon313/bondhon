@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/select";
 import { EVENT_CATEGORIES } from "@/constants";
 
-import { createEvent } from "@/app/actions/event/event.action";
+import { createEvent, updateEvent } from "@/app/actions/event/event.action";
 import { uploadFileToCloudinary } from "@/lib/helpers/cloudinary-upload";
+import { utcToLocalDateTimeInput } from "@/lib/helpers/date";
 import { debounce } from "@/lib/helpers/debounce";
 import { getErrorMessage } from "@/lib/helpers/error";
 import { findMe } from "@/lib/location/find-me";
@@ -38,9 +39,12 @@ import {
   EventFormInput,
   eventSchema,
 } from "@/lib/validations/event/event.schema";
+import { EventCardData } from "@/types/event.type";
 import { LocationOption } from "@/types/location.type";
 
 interface EventFormProps {
+  mode?: "create" | "edit";
+  event?: EventCardData;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -48,8 +52,19 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-export default function EventForm({ onOpenChange }: EventFormProps) {
-  const [query, setQuery] = useState("");
+export default function EventForm({
+  mode = "create",
+  event,
+  onOpenChange,
+}: EventFormProps) {
+  const isEditMode = mode === "edit";
+
+  const [query, setQuery] = useState(
+    event?.location?.area && event?.location?.district
+      ? `${event.location.area}, ${event.location.district}`
+      : "",
+  );
+
   const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
 
   const [isSearching, setIsSearching] = useState(false);
@@ -58,7 +73,7 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
   const [tagInput, setTagInput] = useState("");
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState("");
+  const [coverPreview, setCoverPreview] = useState(event?.thumbnail ?? "");
 
   const {
     register,
@@ -69,20 +84,24 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
   } = useForm<EventFormInput>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      category: undefined,
-      tags: [],
-      startsAt: "",
-      endsAt: "",
-      thumbnail: "",
+      title: event?.title ?? "",
+      description: event?.description ?? "",
+      category: event?.category ?? undefined,
+      tags: event?.tags ?? [],
+
+      startsAt: event?.startsAt ? utcToLocalDateTimeInput(event.startsAt) : "",
+
+      endsAt: event?.endsAt ? utcToLocalDateTimeInput(event.endsAt) : "",
+
+      thumbnail: event?.thumbnail ?? "",
+
       location: {
-        area: "",
-        district: "",
-        address: "",
+        area: event?.location?.area ?? "",
+        district: event?.location?.district ?? "",
+        address: event?.location?.address ?? "",
         coordinates: {
           type: "Point",
-          coordinates: [0, 0],
+          coordinates: event?.location?.coordinates?.coordinates ?? [0, 0],
         },
       },
     },
@@ -207,7 +226,7 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
 
   const onSubmit = async (data: EventFormInput) => {
     try {
-      let thumbnail: string | undefined;
+      let thumbnail = data.thumbnail;
 
       if (coverFile) {
         //  Compress image
@@ -231,8 +250,12 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
           throw new Error("Image upload failed.");
         }
       }
+      const payload = { ...data, thumbnail };
 
-      const result = await createEvent({ ...data, thumbnail });
+      const result =
+        isEditMode && event
+          ? await updateEvent(event.id, payload)
+          : await createEvent(payload);
 
       if (!result.success) {
         toast.error(result.message);
@@ -700,8 +723,11 @@ export default function EventForm({ onOpenChange }: EventFormProps) {
           disabled={isSubmitting || !isDirty}
           className="min-w-32 cursor-pointer bg-emerald-600 text-xs font-semibold text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700"
         >
-          {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Create Event
+          {isSubmitting ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : null}
+
+          {isEditMode ? "Update Event" : "Create Event"}
         </Button>
       </div>
     </form>

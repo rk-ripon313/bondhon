@@ -25,15 +25,18 @@ import { useState } from "react";
 import { toast } from "sonner";
 import EventModal from "../EventModal";
 
-export default function EventActions({ event }: { event: EventCardData }) {
+export default function EventMoreActions({ event }: { event: EventCardData }) {
   const { refresh } = useRouter();
   const organizerName = event.organizer?.name || "Unknown User";
 
   const isExpired = new Date(event.endsAt) <= new Date();
+
   const canEditOrDelete =
     event.isOwner &&
-    (event.status === "ongoing" || event.status === "upcoming") &&
-    !isExpired;
+    !isExpired &&
+    ["upcoming", "ongoing"].includes(event.status);
+
+  const canSaveOrReport = !!event.currentUserId && !event.isOwner;
 
   const [openEdit, setOpenEdit] = useState(false);
 
@@ -74,7 +77,7 @@ export default function EventActions({ event }: { event: EventCardData }) {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-44 bg-app-background">
-          {canEditOrDelete ? (
+          {canEditOrDelete && (
             <>
               <DropdownMenuItem
                 className="cursor-pointer gap-2"
@@ -83,43 +86,39 @@ export default function EventActions({ event }: { event: EventCardData }) {
                 <Pencil className="size-4" />
                 Edit event
               </DropdownMenuItem>
+            </>
+          )}
 
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={handleShare}
-              >
-                <Share2 className="size-4" />
-                Share event
-              </DropdownMenuItem>
+          <DropdownMenuItem
+            className="cursor-pointer gap-2"
+            onClick={handleShare}
+          >
+            <Share2 className="size-4" />
+            Share event
+          </DropdownMenuItem>
 
+          {canEditOrDelete && (
+            <>
               <DropdownMenuSeparator />
-
               <DropdownMenuItem
-                className="cursor-pointer text-destructive focus:text-destructive"
+                className="cursor-pointer gap-2 text-destructive focus:text-destructive"
                 onClick={() => setOpenDelete(true)}
               >
                 <Trash2 className="size-4" />
                 Delete event
               </DropdownMenuItem>
             </>
-          ) : (
-            <>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={handleShare}
-              >
-                <Share2 className="size-4" />
-                Share event
-              </DropdownMenuItem>
+          )}
 
-              <DropdownMenuItem className="cursor-pointer">
+          {canSaveOrReport && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer gap-2">
                 <Bookmark className="size-4" />
                 Save event
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
+              <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:text-destructive">
                 <Flag className="size-4" />
                 Report event
               </DropdownMenuItem>
@@ -129,7 +128,12 @@ export default function EventActions({ event }: { event: EventCardData }) {
       </DropdownMenu>
 
       {/* Edit Modal */}
-      <EventModal open={openEdit} onOpenChange={setOpenEdit} />
+      <EventModal
+        mode="edit"
+        event={event}
+        open={openEdit}
+        onOpenChange={setOpenEdit}
+      />
 
       {/* Delete Confirmation */}
       <ConfirmDialog
