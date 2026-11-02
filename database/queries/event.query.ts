@@ -1,6 +1,12 @@
 import { dbConnect } from "@/lib/db/db-connect";
+import {
+  replaceMongoIdInArray,
+  replaceMongoIdInObject,
+} from "@/lib/helpers/transform-id";
 import { Event } from "@/models/event.model";
 import { EventCardData, GetEventsParams } from "@/types/event.type";
+import { Types } from "mongoose";
+import { getCurrentUser } from "./user.query";
 
 export async function getEvents({
   search,
@@ -15,31 +21,38 @@ export async function getEvents({
   page = 1,
   itemsPerPage = 9,
 }: GetEventsParams = {}) {
+  const currentUser = await getCurrentUser();
+  const currentUserId = currentUser?.id ?? null;
+
   await dbConnect();
 
-  const filter: Record<string, any> = {};
+  // Base filter
+  const filter: Record<string, unknown> = {};
 
   // Search
   if (search?.trim()) {
-    const regex = new RegExp(
+    const searchRegex = new RegExp(
       search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
       "i",
     );
-
-    filter.$or = [{ title: regex }, { category: regex }, { tags: regex }];
+    filter.$or = [
+      { title: searchRegex },
+      { category: searchRegex },
+      { tags: searchRegex },
+    ];
   }
 
   // Location filters
-  if (division) {
-    filter["location.division"] = new RegExp(`^${division}$`, "i");
+  if (!district && division && division !== "all") {
+    filter["location.district"] = division;
   }
 
-  if (district) {
-    filter["location.district"] = new RegExp(`^${district}$`, "i");
+  if (district && district !== "all") {
+    filter["location.district"] = district;
   }
 
-  if (upazila) {
-    filter["location.upazila"] = new RegExp(`^${upazila}$`, "i");
+  if (upazila && upazila !== "all") {
+    filter["location.area"] = upazila;
   }
 
   // Category
@@ -52,83 +65,179 @@ export async function getEvents({
     filter.status = status;
   }
 
-  // Nearest location
-  const latitude = Number(lat);
-  const longitude = Number(lng);
+  // Exclude events from blocked users
+  const blockedIds = (currentUser?.blockedUsers ?? []).map(
+    (id) => new Types.ObjectId(id.toString()),
+  );
 
-  const hasCoordinates =
+  if (blockedIds.length) {
+    filter.organizer = { $nin: blockedIds };
+  }
+
+  // Coordinates: URL first, then saved user location
+  let latitude: number | undefined;
+  let longitude: number | undefined;
+
+  const parsedLat = Number(lat);
+  const parsedLng = Number(lng);
+
+  if (
     lat !== undefined &&
     lng !== undefined &&
-    Number.isFinite(latitude) &&
-    Number.isFinite(longitude);
+    lat !== "" &&
+    lng !== "" &&
+    Number.isFinite(parsedLat) &&
+    Number.isFinite(parsedLng) &&
+    Math.abs(parsedLat) <= 90 &&
+    Math.abs(parsedLng) <= 180
+  ) {
+    latitude = parsedLat;
+    longitude = parsedLng;
+  } else {
+    const coordinates = currentUser?.location?.coordinates?.coordinates;
 
-  const useNearest = sort === "nearest" && hasCoordinates;
+    if (Array.isArray(coordinates) && coordinates.length === 2) {
+      const [userLng, userLat] = coordinates;
 
-  const countFilter = { ...filter };
-
-  if (useNearest) {
-    filter["location.coordinates"] = {
-      $near: {
-        $geometry: {
-          type: "Point",
-          coordinates: [longitude, latitude],
-        },
-      },
-    };
+      if (typeof userLat === "number" && typeof userLng === "number") {
+        latitude = userLat;
+        longitude = userLng;
+      }
+    }
   }
 
-  const currentPage = Math.max(Number(page) || 1, 1);
-  const limit = Math.max(Number(itemsPerPage) || 9, 1);
+  const hasLocation = latitude !== undefined && longitude !== undefined;
+
+  // Pagination
+  const currentPage = Math.max(1, Number(page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(itemsPerPage) || 9));
   const skip = (currentPage - 1) * limit;
 
-  const sortOption = sort === "latest" ? { createdAt: -1 } : { startsAt: 1 };
+  const totalCount = await Event.countDocuments(filter);
+  const totalPages = Math.ceil(totalCount / limit);
 
-  const eventsQuery = Event.find(filter)
-    .populate("organizer", "name username image")
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  // Fetch events
+  let events;
 
-  // $near already sorts by distance
-  if (!useNearest) {
-    eventsQuery.sort(sortOption);
+  if (sort === "nearest" && hasLocation) {
+    events = await Event.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [longitude!, latitude!],
+          },
+          distanceField: "distance",
+          spherical: true,
+          key: "location.coordinates.coordinates",
+          query: filter,
+        },
+      },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "organizer",
+          foreignField: "_id",
+          as: "organizer",
+        },
+      },
+      {
+        $unwind: {
+          path: "$organizer",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          thumbnail: 1,
+          category: 1,
+          startsAt: 1,
+          endsAt: 1,
+          status: 1,
+          location: 1,
+          interestedUsers: 1,
+          goingUsers: 1,
+          distance: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          organizer: {
+            _id: 1,
+            name: 1,
+            username: 1,
+            image: 1,
+            phone: 1,
+            email: 1,
+          },
+        },
+      },
+    ]);
+  } else {
+    events = await Event.find(filter)
+      .populate({
+        path: "organizer",
+        select: "name username image phone email",
+      })
+      .sort(sort === "latest" ? { createdAt: -1 } : { startsAt: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
   }
 
-  const [events, totalCount] = await Promise.all([
-    eventsQuery,
-    Event.countDocuments(countFilter),
-  ]);
+  // Format events and current user relationships
+  const formattedEvents = events.map((event) => {
+    const interestedUsers = (event.interestedUsers ?? []) as Types.ObjectId[];
+    const goingUsers = (event.goingUsers ?? []) as Types.ObjectId[];
 
-  const serializedEvents = events.map((event) => {
-    const organizer = event.organizer as unknown as {
-      _id: { toString(): string };
+    const organizer = event.organizer as {
+      _id: Types.ObjectId;
       name: string;
       username: string;
-      image?: string;
+      image: string;
     };
 
+    const organizerId = organizer?._id.toString();
+
+    const eventData = { ...event };
+
+    delete eventData.interestedUsers;
+    delete eventData.goingUsers;
+
     return {
-      ...event,
-      id: event._id.toString(),
-      organizer: organizer
-        ? {
-            id: organizer._id.toString(),
-            name: organizer.name,
-            username: organizer.username,
-            image: organizer.image,
-          }
-        : null,
-      interestedCount: event.interestedUsers?.length ?? 0,
-      goingCount: event.goingUsers?.length ?? 0,
+      ...eventData,
+
+      organizer: organizer ? replaceMongoIdInObject(organizer) : null,
+
+      interestedCount: interestedUsers.length,
+      goingCount: goingUsers.length,
+
+      currentUserId,
+
+      isOwner: !!currentUserId && organizerId === currentUserId,
+
+      isFollowing:
+        !!currentUserId &&
+        organizerId !== currentUserId &&
+        (currentUser?.following ?? []).some(
+          (userId) => userId.toString() === organizerId,
+        ),
+
+      isInterested:
+        !!currentUserId &&
+        interestedUsers.some((userId) => userId.toString() === currentUserId),
+
+      isGoing:
+        !!currentUserId &&
+        goingUsers.some((userId) => userId.toString() === currentUserId),
     };
   });
 
-  const totalPages = Math.ceil(totalCount / limit);
-
   return {
-    events: serializedEvents as EventCardData[],
+    events: replaceMongoIdInArray(formattedEvents) as EventCardData[],
     totalCount,
     totalPages,
-    currentPage,
   };
 }

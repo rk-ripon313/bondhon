@@ -1,49 +1,37 @@
 "use client";
 
 import {
-  Bookmark,
+  ArrowUpRight,
   CalendarDays,
+  CheckCircle2,
   Clock3,
-  Flag,
   MapPin,
-  MoreHorizontal,
-  Pencil,
-  Share2,
-  Trash2,
+  Star,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
-import { formatEventDateRange } from "@/lib/helpers/date";
+import FollowToggle from "@/components/shared/FollowToggle";
+import { Button } from "@/components/ui/button";
+import { formatEventDateRange, getTimeAgo } from "@/lib/helpers/date";
 import { formatLocation } from "@/lib/helpers/location-format";
 import { getStatusStyles } from "@/lib/helpers/status";
 import { cn } from "@/lib/utils";
 import { EventCardData } from "@/types/event.type";
+import { toast } from "sonner";
+import EventActions from "./EventActions";
 
-interface EventCardProps {
-  event: EventCardData;
-  currentUserId?: string;
-}
-
-export default function EventCard({ event, currentUserId }: EventCardProps) {
-  const isOwner = currentUserId === event.organizer?.id;
-
+export default function EventCard({ event }: { event: EventCardData }) {
   const { dateLabel, timeLabel } = formatEventDateRange(
     event.startsAt,
     event.endsAt,
   );
+
+  const organizerName = event.organizer?.name || "Unknown User";
 
   return (
     <Card className="group overflow-hidden gap-0 border-border/70 bg-app-card py-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -65,66 +53,13 @@ export default function EventCard({ event, currentUserId }: EventCardProps) {
             variant="outline"
             className={cn(
               "border bg-background/85 capitalize shadow-sm backdrop-blur-md",
-              getStatusStyles[event.status],
+              getStatusStyles(event.status),
             )}
           >
             {event.status}
           </Badge>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="bg-app-card">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="cursor-pointer pointer-events-auto size-8 border border-border/60 bg-background/85 shadow-sm backdrop-blur-md hover:bg-background"
-              >
-                <MoreHorizontal className="size-4" />
-                <span className="sr-only">More actions</span>
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-44 bg-app-background">
-              {isOwner ? (
-                <>
-                  <DropdownMenuItem>
-                    <Pencil className="size-4" />
-                    Edit event
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem>
-                    <Share2 className="size-4" />
-                    Share event
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem className="text-destructive focus:text-destructive">
-                    <Trash2 className="size-4" />
-                    Delete event
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                <>
-                  <DropdownMenuItem>
-                    <Share2 className="size-4" />
-                    Share event
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem>
-                    <Bookmark className="size-4" />
-                    Save event
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem className="text-destructive focus:text-destructive">
-                    <Flag className="size-4" />
-                    Report event
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <EventActions event={event} />
         </div>
       </div>
 
@@ -143,7 +78,7 @@ export default function EventCard({ event, currentUserId }: EventCardProps) {
           </p>
         </div>
 
-        {/* Date & Time */}
+        {/* Date + Time & Location */}
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
             <CalendarDays className="size-4 shrink-0 text-app-primary" />
@@ -166,24 +101,79 @@ export default function EventCard({ event, currentUserId }: EventCardProps) {
         {/* Organizer + Participation Counts */}
         <div className="flex items-center gap-2 border-t border-border/60 pt-3">
           <Avatar className="size-8">
-            <AvatarImage src={event.organizer?.image} />
-            <AvatarFallback>
-              {event.organizer?.name?.charAt(0) || "U"}
+            <AvatarImage src={event.organizer?.image} alt={organizerName} />
+
+            <AvatarFallback className="bg-app-secondary/10 text-sm font-semibold text-app-secondary">
+              {organizerName?.at(0)?.toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {event.organizer?.name}
-            </p>
-            <p className="text-xs text-muted-foreground">Organizer</p>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-semibold text-app-foreground">
+                {organizerName}
+              </p>
+              {!event.isOwner && (
+                <FollowToggle
+                  username={event.organizer.username}
+                  isFollowing={event.isFollowing}
+                />
+              )}
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              <span>{getTimeAgo(event.createdAt)}</span>
+            </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-            <span>{event.goingCount} Going</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="flex gap-1 items-center">
+              {event.goingCount} <CheckCircle2 className="size-3.5" />
+            </span>
             <span>·</span>
-            <span>{event.interestedCount} Interested</span>
+            <span className="flex gap-1 items-center">
+              {event.interestedCount} <Star className="size-3.5" />
+            </span>
+            <Link href={`/events/${event.id}`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="me-0 size-8 cursor-pointer text-app-secondary hover:bg-app-secondary/10 hover:text-app-secondary sm:w-auto sm:px-2.5"
+                aria-label="View details"
+              >
+                <ArrowUpRight className="size-4" />
+              </Button>
+            </Link>
           </div>
+        </div>
+        {/* Event Actions */}
+        <div className="flex items-center gap-2 border-t border-border/60 pt-3">
+          <Button
+            size="sm"
+            variant={event.isInterested ? "default" : "outline"}
+            className={cn(
+              "flex-1 gap-1.5",
+              event.isInterested &&
+                "bg-app-primary text-white hover:bg-app-primary/90",
+            )}
+            onClick={() =>
+              toast.info("Interested action will be available soon.")
+            }
+          >
+            <Star className="size-4" />
+            Interested
+          </Button>
+          <Button
+            size="sm"
+            variant={event.isGoing ? "default" : "outline"}
+            className={cn(
+              "flex-1 gap-1.5",
+              event.isGoing && "bg-emerald-600 text-white hover:bg-emerald-700",
+            )}
+            onClick={() => toast.info("Going action will be available soon.")}
+          >
+            <CheckCircle2 className="size-4" />
+            {event.isGoing ? "Going" : "Go"}
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -1,4 +1,3 @@
-import { EVENT_CATEGORIES, EVENT_STATUS } from "@/constants";
 import { LocationData } from "./location.type";
 
 export interface GetEventsParams {
@@ -18,27 +17,30 @@ export interface GetEventsParams {
 export interface EventCardData {
   id: string;
   title: string;
-  description?: string;
-  thumbnail: string;
-  category: (typeof EVENT_CATEGORIES)[number];
-  tags: string[];
+  description: string;
+  thumbnail?: string;
+  category: string;
   startsAt: Date | string;
   endsAt: Date | string;
-  location?: LocationData;
+  status: string;
 
-  status: (typeof EVENT_STATUS)[number];
+  location?: LocationData;
 
   organizer: {
     id: string;
     name: string;
     username: string;
     image?: string;
+    phone?: string;
+    email?: string;
   };
 
   interestedCount: number;
   goingCount: number;
 
   isOwner: boolean;
+  isFollowing: boolean;
+  currentUserId?: string;
   isInterested: boolean;
   isGoing: boolean;
 
