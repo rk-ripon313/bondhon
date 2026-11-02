@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Bookmark,
-  Flag,
-  MoreHorizontal,
-  Pencil,
-  Share2,
-  Trash2,
-} from "lucide-react";
+import { Bookmark, Flag, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { deleteEvent } from "@/app/actions/event/event.action";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ShareButton from "@/components/shared/ShareAction";
 import { EventCardData } from "@/types/event.type";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -43,25 +38,28 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
   const [openDelete, setOpenDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleShare = async () => {
-    const shareData = {
-      title: `Event: ${event.title}`,
-      text: `Check out this event: ${event.title} organized by ${organizerName}.`,
-      url: `${window.location.origin}/events/${event.id}`,
-    };
+  const handleDelete = async () => {
+    setIsDeleting(true);
 
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        toast.success("Event shared successfully!");
-      } else {
-        await navigator.clipboard.writeText(shareData.url);
-        toast.success("Link copied to clipboard! Share it anywhere.");
+      const result = await deleteEvent(event.id);
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
       }
+
+      toast.success(result.message);
+      setOpenDelete(false);
+      refresh();
     } catch (error) {
-      console.error("Error sharing event:", error);
+      console.error("Delete Event Error:", error);
+      toast.error("Failed to delete event.");
+    } finally {
+      setIsDeleting(false);
     }
   };
+
   return (
     <>
       <DropdownMenu>
@@ -89,12 +87,13 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
             </>
           )}
 
-          <DropdownMenuItem
-            className="cursor-pointer gap-2"
-            onClick={handleShare}
-          >
-            <Share2 className="size-4" />
-            Share event
+          <DropdownMenuItem asChild>
+            <ShareButton
+              title={`Event: ${event.title}`}
+              text={`Check out this event: ${event.title} organized by ${organizerName}.`}
+              url={`/events/${event.id}`}
+              className="h-auto w-full justify-start px-2 py-1.5"
+            />
           </DropdownMenuItem>
 
           {canEditOrDelete && (
@@ -109,7 +108,8 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
               </DropdownMenuItem>
             </>
           )}
-
+          {/* TODO: Implement save/unsave event functionality. */}
+          {/* TODO: Implement event reporting functionality. */}
           {canSaveOrReport && (
             <>
               <DropdownMenuSeparator />
@@ -140,10 +140,14 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
         open={openDelete}
         onOpenChange={setOpenDelete}
         title="Delete Event?"
-        description="This action cannot be undone. Are you sure you want to delete this event?"
-        confirmText="Delete Request"
+        description={
+          event.goingCount > 0 || event.interestedCount > 0
+            ? `This event has ${event.goingCount} going and ${event.interestedCount} interested participants. Deleting it will permanently remove the event. Are you sure?`
+            : "This action cannot be undone. Are you sure you want to delete this event?"
+        }
+        confirmText="Delete Event"
         loading={isDeleting}
-        onConfirm={() => setIsDeleting(false)}
+        onConfirm={handleDelete}
       />
     </>
   );

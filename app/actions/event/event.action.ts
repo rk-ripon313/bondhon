@@ -260,3 +260,55 @@ export async function updateEvent(eventId: string, data: EventFormInput) {
     };
   }
 }
+
+/**
+ * Deletes an existing event from the database and notifies interested and going users about the deletion.
+ * @param {string} eventId - The ID of the event to delete.
+ * @returns {Promise<{ success: boolean; message: string }>} - An object indicating the success status and a message.
+ */
+
+export async function deleteEvent(eventId: string) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user?.id) {
+      return { success: false, message: "User not authenticated." };
+    }
+
+    await dbConnect();
+
+    const now = new Date();
+
+    // Verify ownership, status and expiry before deleting.
+    const deletedEvent = await Event.findOneAndDelete({
+      _id: eventId,
+      organizer: user.id,
+      status: "upcoming",
+      endsAt: { $gt: now },
+    });
+
+    if (!deletedEvent) {
+      return {
+        success: false,
+        message: "Event not found or it is no longer available for deletion.",
+      };
+    }
+
+    revalidatePath("/");
+    revalidatePath("/profile");
+    revalidatePath("/events");
+    revalidatePath(`/events/${eventId}`);
+
+    return {
+      success: true,
+      message: "Event deleted successfully.",
+    };
+  } catch (error) {
+    console.error("Delete Event Error:", error);
+
+    return {
+      success: false,
+      message: "An error occurred while deleting the event.",
+    };
+  }
+}

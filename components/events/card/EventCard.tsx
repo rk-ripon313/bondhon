@@ -33,6 +33,10 @@ export default function EventCard({ event }: { event: EventCardData }) {
 
   const organizerName = event.organizer?.name || "Unknown User";
 
+  const statusStyles = getStatusStyles(
+    new Date(event.endsAt) <= new Date() ? "expired" : event.status,
+  );
+
   return (
     <Card className="group overflow-hidden gap-0 border-border/70 bg-app-card py-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       {/* Thumbnail */}
@@ -51,12 +55,15 @@ export default function EventCard({ event }: { event: EventCardData }) {
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3">
           <Badge
             variant="outline"
-            className={cn(
-              "border bg-background/85 capitalize shadow-sm backdrop-blur-md",
-              getStatusStyles(event.status),
-            )}
+            className="flex items-center gap-1.5 border bg-app-background/85 px-2.5 py-1 text-xs font-medium backdrop-blur-md shadow-sm"
+            title={`Status: ${statusStyles.label}`}
           >
-            {event.status}
+            <span
+              className={cn("size-1.5 rounded-full shrink-0", statusStyles.dot)}
+              aria-hidden="true"
+            />
+
+            <span className="capitalize">{statusStyles.label}</span>
           </Badge>
 
           {/* Event MoreActions dropdown */}
