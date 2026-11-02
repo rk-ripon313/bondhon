@@ -159,6 +159,7 @@ export async function getEvents({
           endsAt: 1,
           status: 1,
           location: 1,
+          tags: 1,
           interestedUsers: 1,
           goingUsers: 1,
           distance: 1,
