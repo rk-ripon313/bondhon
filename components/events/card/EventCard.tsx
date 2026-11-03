@@ -1,13 +1,4 @@
-"use client";
-
-import {
-  ArrowUpRight,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  MapPin,
-  Star,
-} from "lucide-react";
+import { ArrowUpRight, CalendarDays, Clock3, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -22,8 +13,8 @@ import { formatLocation } from "@/lib/helpers/location-format";
 import { getStatusStyles } from "@/lib/helpers/status";
 import { cn } from "@/lib/utils";
 import { EventCardData } from "@/types/event.type";
-import { toast } from "sonner";
 import EventMoreActions from "./EventMoreActions";
+import EventParticipation from "./EventParticipation";
 
 export default function EventCard({ event }: { event: EventCardData }) {
   const { dateLabel, timeLabel } = formatEventDateRange(
@@ -107,13 +98,15 @@ export default function EventCard({ event }: { event: EventCardData }) {
         </div>
         {/* Organizer + Participation Counts */}
         <div className="flex items-center gap-2 border-t border-border/60 pt-3">
-          <Avatar className="size-8">
-            <AvatarImage src={event.organizer?.image} alt={organizerName} />
+          <Link href={`/user/${event.organizer.username}`}>
+            <Avatar className="size-8">
+              <AvatarImage src={event.organizer?.image} alt={organizerName} />
 
-            <AvatarFallback className="bg-app-secondary/10 text-sm font-semibold text-app-secondary">
-              {organizerName?.at(0)?.toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
+              <AvatarFallback className="bg-app-secondary/10 text-sm font-semibold text-app-secondary">
+                {organizerName?.at(0)?.toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -132,56 +125,29 @@ export default function EventCard({ event }: { event: EventCardData }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="flex gap-1 items-center">
-              {event.goingCount} <CheckCircle2 className="size-3.5" />
-            </span>
-            <span>·</span>
-            <span className="flex gap-1 items-center">
-              {event.interestedCount} <Star className="size-3.5" />
-            </span>
-            <Link href={`/events/${event.id}`}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="me-0 size-8 cursor-pointer text-app-secondary hover:bg-app-secondary/10 hover:text-app-secondary sm:w-auto sm:px-2.5"
-                aria-label="View details"
-              >
-                <ArrowUpRight className="size-4" />
-              </Button>
-            </Link>
-          </div>
+          <Link href={`/events/${event.id}`}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 cursor-pointer bg-app-background text-app-secondary hover:bg-app-secondary/10 hover:text-app-secondary sm:w-auto sm:px-2.5"
+              aria-label="View details"
+            >
+              <span className="hidden sm:inline text-xs font-semibold">
+                View Details
+              </span>
+              <ArrowUpRight className="sm:size-4 size-6" />
+            </Button>
+          </Link>
         </div>
-        {/* Event Actions */}
-        <div className="flex items-center gap-2 border-t border-border/60 pt-3">
-          <Button
-            size="sm"
-            variant={event.isInterested ? "default" : "outline"}
-            className={cn(
-              "flex-1 gap-1.5",
-              event.isInterested &&
-                "bg-app-primary text-white hover:bg-app-primary/90",
-            )}
-            onClick={() =>
-              toast.info("Interested action will be available soon.")
-            }
-          >
-            <Star className="size-4" />
-            Interested
-          </Button>
-          <Button
-            size="sm"
-            variant={event.isGoing ? "default" : "outline"}
-            className={cn(
-              "flex-1 gap-1.5",
-              event.isGoing && "bg-emerald-600 text-white hover:bg-emerald-700",
-            )}
-            onClick={() => toast.info("Going action will be available soon.")}
-          >
-            <CheckCircle2 className="size-4" />
-            {event.isGoing ? "Going" : "Go"}
-          </Button>
-        </div>
+
+        {/* Even */}
+        <EventParticipation
+          eventId={event.id}
+          isInterested={event.isInterested}
+          isGoing={event.isGoing}
+          interestedCount={event.interestedCount}
+          goingCount={event.goingCount}
+        />
       </CardContent>
     </Card>
   );

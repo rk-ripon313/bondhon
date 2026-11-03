@@ -312,3 +312,105 @@ export async function deleteEvent(eventId: string) {
     };
   }
 }
+
+/**
+ * Toggles a user's event participation.
+ * @param {string} eventId - The ID of the event.
+ * @param {"interested" | "going"} action - The participation action to toggle.
+ * @returns {Promise<{ success: boolean; message: string }>} - An object indicating the success status and a message.
+ */
+
+export async function toggleEventParticipation(
+  eventId: string,
+  action: "interested" | "going",
+) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user?.id) {
+      return {
+        success: false,
+        message: "Please sign in to participate.",
+      };
+    }
+
+    await dbConnect();
+
+    const event = await Event.findById(eventId).select(
+      "status endsAt interestedUsers goingUsers",
+    );
+
+    if (!event) {
+      return {
+        success: false,
+        message: "Event not found.",
+      };
+    }
+
+    const now = new Date();
+
+    if (event.endsAt <= now) {
+      return {
+        success: false,
+        message: "This event has already ended.",
+      };
+    }
+
+    if (!["upcoming", "ongoing"].includes(event.status)) {
+      return {
+        success: false,
+        message: "Participation is closed for this event.",
+      };
+    }
+
+    const userId = new Types.ObjectId(user.id);
+
+    const isInterested = event.interestedUsers.some(
+      (id: Types.ObjectId) => id.toString() === user.id,
+    );
+
+    const isGoing = event.goingUsers.some(
+      (id: Types.ObjectId) => id.toString() === user.id,
+    );
+
+    let message = "";
+
+    if (action === "interested") {
+      if (isInterested) {
+        event.interestedUsers.pull(userId);
+        message = "Removed from interested list.";
+      } else {
+        event.interestedUsers.push(userId);
+        event.goingUsers.pull(userId);
+        message = "Added to interested list.";
+      }
+    } else {
+      if (isGoing) {
+        event.goingUsers.pull(userId);
+        message = "Removed from going list.";
+      } else {
+        event.goingUsers.push(userId);
+        event.interestedUsers.pull(userId);
+        message = "Added to going list.";
+      }
+    }
+
+    await event.save();
+
+    revalidatePath("/");
+    revalidatePath("/events");
+    revalidatePath(`/events/${eventId}`);
+
+    return {
+      success: true,
+      message,
+    };
+  } catch (error) {
+    console.error("Event Participation Error:", error);
+
+    return {
+      success: false,
+      message: "Unable to update your participation.",
+    };
+  }
+}
