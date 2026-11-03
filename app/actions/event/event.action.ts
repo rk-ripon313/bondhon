@@ -337,7 +337,7 @@ export async function toggleEventParticipation(
     await dbConnect();
 
     const event = await Event.findById(eventId).select(
-      "organizer status endsAt interestedUsers goingUsers",
+      "title organizer status endsAt interestedUsers goingUsers",
     );
 
     if (!event) {
