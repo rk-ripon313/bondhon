@@ -337,7 +337,7 @@ export async function toggleEventParticipation(
     await dbConnect();
 
     const event = await Event.findById(eventId).select(
-      "status endsAt interestedUsers goingUsers",
+      "organizer status endsAt interestedUsers goingUsers",
     );
 
     if (!event) {
@@ -396,6 +396,35 @@ export async function toggleEventParticipation(
     }
 
     await event.save();
+
+    const nextState =
+      action === "interested"
+        ? isInterested
+          ? null
+          : "interested"
+        : isGoing
+          ? null
+          : "going";
+
+    // TODO: Remove or update previous participation notifications
+    // when notification cleanup functionality is implemented.
+
+    if (nextState && event.organizer.toString() !== user.id) {
+      await createNotifications({
+        receivers: [event.organizer],
+        actor: user.id,
+        type: nextState === "interested" ? "event_interested" : "event_going",
+        title:
+          nextState === "interested"
+            ? "New Event Interest"
+            : "New Event Participant",
+        message:
+          nextState === "interested"
+            ? `Someone is interested in "${event.title}".`
+            : `Someone is going to "${event.title}".`,
+        link: `/events/${eventId}`,
+      });
+    }
 
     revalidatePath("/");
     revalidatePath("/events");
