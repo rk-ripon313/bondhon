@@ -13,7 +13,7 @@ import { formatLocation } from "@/lib/helpers/location-format";
 import { getStatusStyles } from "@/lib/helpers/status";
 import { cn } from "@/lib/utils";
 import { EventCardData } from "@/types/event.type";
-import EventMoreActions from "./EventMoreActions";
+import EventMoreActions from "../EventMoreActions";
 import EventParticipation from "./EventParticipation";
 
 export default function EventCard({ event }: { event: EventCardData }) {

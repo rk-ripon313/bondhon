@@ -1,6 +1,13 @@
 "use client";
 
-import { Bookmark, Flag, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  Bookmark,
+  Flag,
+  MoreHorizontal,
+  Pencil,
+  ShieldBan,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,13 +19,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { deleteEvent } from "@/app/actions/event/event.action";
+import { toggleBlock } from "@/app/actions/profile/connections.action";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import ShareButton from "@/components/shared/ShareAction";
 import { EventCardData } from "@/types/event.type";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import EventModal from "../EventModal";
+import EventModal from "./EventModal";
 
 export default function EventMoreActions({ event }: { event: EventCardData }) {
   const { refresh } = useRouter();
@@ -37,6 +45,9 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
 
   const [openDelete, setOpenDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [openBlockUser, setOpenBlockUser] = useState(false);
+  const [isBlockingUser, setIsBlockingUser] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -60,10 +71,32 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
     }
   };
 
+  const handleBlockUser = async () => {
+    setIsBlockingUser(true);
+
+    try {
+      const result = await toggleBlock(event.organizer.username);
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      setOpenBlockUser(false);
+      refresh();
+    } catch (error) {
+      console.error("Block User Error:", error);
+      toast.error("Failed to block user.");
+    } finally {
+      setIsBlockingUser(false);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild className="bg-app-card">
+        <DropdownMenuTrigger asChild className="bg-app-background">
           <Button
             variant="secondary"
             size="icon"
@@ -122,6 +155,14 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
                 <Flag className="size-4" />
                 Report event
               </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                onClick={() => setOpenBlockUser(true)}
+              >
+                <ShieldBan className="size-4" />
+                Block organizer
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
@@ -148,6 +189,17 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
         confirmText="Delete Event"
         loading={isDeleting}
         onConfirm={handleDelete}
+      />
+
+      {/* Block Confirmation */}
+      <ConfirmDialog
+        open={openBlockUser}
+        onOpenChange={setOpenBlockUser}
+        title="Block Organizer?"
+        description={`Are you sure you want to block ${organizerName}? You won't see their events anymore.`}
+        confirmText="Block User"
+        loading={isBlockingUser}
+        onConfirm={handleBlockUser}
       />
     </>
   );
