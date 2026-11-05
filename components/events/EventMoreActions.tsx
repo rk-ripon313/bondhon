@@ -96,11 +96,11 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild className="bg-app-background">
+        <DropdownMenuTrigger asChild className="bg-app-card">
           <Button
             variant="secondary"
             size="icon"
-            className="cursor-pointer pointer-events-auto size-8 border border-border/60 bg-background/85 shadow-sm backdrop-blur-md hover:bg-background"
+            className="cursor-pointer pointer-events-auto size-8 border border-border/60 bg-app-background/85 shadow-sm backdrop-blur-md hover:bg-app-background"
           >
             <MoreHorizontal className="size-4" />
             <span className="sr-only">More actions</span>

@@ -4,9 +4,20 @@ import {
   replaceMongoIdInObject,
 } from "@/lib/helpers/transform-id";
 import { Event } from "@/models/event.model";
-import { EventCardData, GetEventsParams } from "@/types/event.type";
+import {
+  EventCardData,
+  EventDetailData,
+  GetEventsParams,
+} from "@/types/event.type";
 import { Types } from "mongoose";
 import { getCurrentUser } from "./user.query";
+
+/**
+ * Fetches events based on the provided parameters, including search, category, status, sorting, location, and pagination. Returns the filtered events along with total count and total pages.
+ *
+ * @param {GetEventsParams} params - The parameters for filtering and sorting events.
+ * @returns {Promise<{ requests: EventCardData[]; totalCount: number; totalPages: number }>} A promise that resolves to an object containing the filtered events, total count, and total pages.
+ */
 
 export async function getEvents({
   search,
@@ -241,4 +252,104 @@ export async function getEvents({
     totalCount,
     totalPages,
   };
+}
+
+/**
+ * Fetches a events by its ID and returns detailed information about the eventa, including organizer user details, interested uaers, going users, and user-specific flags.
+ *
+ * @param {string} eventId - The ID of the events to fetch.
+ * @returns {Promise<EventDetailData | null>} A promise that resolves to the detailed events data or null if not found.
+ */
+
+export async function getEventById(
+  eventId: string,
+): Promise<EventDetailData | null> {
+  if (!Types.ObjectId.isValid(eventId)) return null;
+
+  const currentUser = await getCurrentUser();
+  const currentUserId = currentUser?.id ?? null;
+
+  await dbConnect();
+
+  // Exclude events organized by users blocked by the current user.
+  const blockedIds = (currentUser?.blockedUsers ?? []).map(
+    (id) => new Types.ObjectId(id.toString()),
+  );
+
+  const filter: Record<string, unknown> = {
+    _id: new Types.ObjectId(eventId),
+  };
+
+  if (blockedIds.length) {
+    filter.organizer = { $nin: blockedIds };
+  }
+
+  const event = await Event.findOne(filter)
+    .populate({
+      path: "organizer",
+      select: "name username image phone email",
+    })
+    .populate({
+      path: "interestedUsers",
+      select: "name username image phone location",
+    })
+    .populate({
+      path: "goingUsers",
+      select: "name username image phone location",
+    })
+    .lean();
+
+  if (!event || !event.organizer) return null;
+
+  const organizer = replaceMongoIdInObject(event.organizer);
+
+  if (!organizer) return null;
+
+  const followingIds = new Set(
+    (currentUser?.following ?? []).map((id) => id.toString()),
+  );
+
+  const interestedUsers = replaceMongoIdInArray(event.interestedUsers).map(
+    (user) => ({
+      ...user,
+      isFollowing:
+        !!currentUserId &&
+        user.id !== currentUserId &&
+        followingIds.has(user.id),
+      isYou: !!currentUserId && user.id === currentUserId,
+    }),
+  );
+
+  const goingUsers = replaceMongoIdInArray(event.goingUsers).map((user) => ({
+    ...user,
+    isFollowing:
+      !!currentUserId && user.id !== currentUserId && followingIds.has(user.id),
+    isYou: !!currentUserId && user.id === currentUserId,
+  }));
+
+  const isOwner = !!currentUserId && organizer.id === currentUserId;
+
+  const isFollowing =
+    !!currentUserId && !isOwner && followingIds.has(organizer.id);
+
+  const isInterested =
+    !!currentUserId &&
+    interestedUsers.some((user) => user.id === currentUserId);
+
+  const isGoing =
+    !!currentUserId && goingUsers.some((user) => user.id === currentUserId);
+
+  return {
+    ...replaceMongoIdInObject(event),
+    organizer,
+    interestedUsers,
+    goingUsers,
+    interestedCount: interestedUsers.length,
+    goingCount: goingUsers.length,
+    currentUserId,
+    isOwner,
+    isFollowing,
+    isInterested,
+    isGoing,
+  } as EventDetailData;
 }

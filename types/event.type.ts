@@ -49,3 +49,18 @@ export interface EventCardData {
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
+
+export interface EventDetailParticipant {
+  id: string;
+  name: string;
+  username: string;
+  image?: string;
+  location: LocationData;
+  isFollowing: boolean;
+  isYou: boolean;
+}
+
+export interface EventDetailData extends EventCardData {
+  interestedUsers: EventDetailParticipant[];
+  goingUsers: EventDetailParticipant[];
+}
