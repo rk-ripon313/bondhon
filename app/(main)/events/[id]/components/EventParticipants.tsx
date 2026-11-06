@@ -14,7 +14,7 @@ interface ParticipantListProps {
   emptyDescription: string;
 }
 
-export default function ParticipantList({
+export default function EventParticipants({
   title,
   description,
   participants,

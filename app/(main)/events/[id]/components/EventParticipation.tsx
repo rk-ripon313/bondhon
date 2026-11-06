@@ -3,6 +3,10 @@
 import { toggleEventParticipation } from "@/app/actions/event/event.action";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/helpers/error";
+import {
+  canParticipateInEvent,
+  getEffectiveEventStatus,
+} from "@/lib/helpers/status";
 import { EventCardData } from "@/types/event.type";
 import { Heart, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -14,25 +18,14 @@ export default function EventParticipation({
 }: {
   event: EventCardData;
 }) {
-  const {
-    id,
-    status,
-    isOwner,
-    isGoing,
-    isInterested,
-    goingCount,
-    interestedCount,
-    startsAt,
-    endsAt,
-  } = event;
+  const { id, isOwner, isGoing, isInterested, goingCount, interestedCount } =
+    event;
 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const isExpired = new Date() > endsAt;
-
-  const canParticipate =
-    !isExpired && status !== "completed" && status !== "cancelled";
+  const effectiveStatus = getEffectiveEventStatus(event);
+  const canParticipate = canParticipateInEvent(effectiveStatus);
 
   const handleParticipation = (action: "going" | "interested") => {
     startTransition(async () => {
@@ -111,13 +104,13 @@ export default function EventParticipation({
         </p>
       )}
 
-      {(isExpired || status === "completed") && (
+      {effectiveStatus === "completed" && (
         <p className="mt-3 text-center text-xs text-muted-foreground">
           This event has ended.
         </p>
       )}
 
-      {status === "cancelled" && (
+      {effectiveStatus === "cancelled" && (
         <p className="mt-3 text-center text-xs text-destructive">
           This event has been cancelled.
         </p>

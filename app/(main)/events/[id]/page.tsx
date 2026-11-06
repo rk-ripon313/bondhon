@@ -5,7 +5,7 @@ import EventDetailHero from "./components/EventDetailHero";
 import EventOrganizer from "./components/EventOrganizer";
 import EventOverview from "./components/EventOverview";
 import ParticipantList from "./components/EventParticipants";
-import EventParticipation from "./components/EventParticipation ";
+import EventParticipation from "./components/EventParticipation";
 
 export default async function EventDetailsPage({
   params,

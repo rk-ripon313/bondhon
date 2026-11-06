@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/helpers/date";
 import { formatLocation } from "@/lib/helpers/location-format";
-import { getStatusStyles } from "@/lib/helpers/status";
+import { getEffectiveEventStatus, getStatusStyles } from "@/lib/helpers/status";
 import { EventCardData } from "@/types/event.type";
 
 export default function EventDetailHero({ event }: { event: EventCardData }) {
@@ -20,9 +20,7 @@ export default function EventDetailHero({ event }: { event: EventCardData }) {
     ? formatDate(startDate)
     : `${formatDate(startDate)} – ${formatDate(endDate)}`;
 
-  const statusStyles = getStatusStyles(
-    endDate <= new Date() ? "expired" : event.status,
-  );
+  const statusStyles = getStatusStyles(getEffectiveEventStatus(event));
 
   const categoryLabel = event.category.replaceAll("-", " ");
 
