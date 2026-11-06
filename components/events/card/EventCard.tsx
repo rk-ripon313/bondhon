@@ -10,11 +10,11 @@ import FollowToggle from "@/components/shared/FollowToggle";
 import { Button } from "@/components/ui/button";
 import { formatEventDateRange, getTimeAgo } from "@/lib/helpers/date";
 import { formatLocation } from "@/lib/helpers/location-format";
-import { getStatusStyles } from "@/lib/helpers/status";
+import { getEffectiveEventStatus, getStatusStyles } from "@/lib/helpers/status";
 import { cn } from "@/lib/utils";
 import { EventCardData } from "@/types/event.type";
 import EventMoreActions from "../EventMoreActions";
-import EventParticipation from "./EventParticipation";
+import EventCardParticipation from "./EventCardParticipation";
 
 export default function EventCard({ event }: { event: EventCardData }) {
   const { dateLabel, timeLabel } = formatEventDateRange(
@@ -24,9 +24,7 @@ export default function EventCard({ event }: { event: EventCardData }) {
 
   const organizerName = event.organizer?.name || "Unknown User";
 
-  const statusStyles = getStatusStyles(
-    new Date(event.endsAt) <= new Date() ? "expired" : event.status,
-  );
+  const statusStyles = getStatusStyles(getEffectiveEventStatus(event));
 
   return (
     <Card className="group overflow-hidden gap-0 border-border/70 bg-app-card py-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -140,14 +138,8 @@ export default function EventCard({ event }: { event: EventCardData }) {
           </Link>
         </div>
 
-        {/* Even */}
-        <EventParticipation
-          eventId={event.id}
-          isInterested={event.isInterested}
-          isGoing={event.isGoing}
-          interestedCount={event.interestedCount}
-          goingCount={event.goingCount}
-        />
+        {/* Event */}
+        <EventCardParticipation event={event} />
       </CardContent>
     </Card>
   );

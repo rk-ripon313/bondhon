@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Ban,
   Bookmark,
   Flag,
   MoreHorizontal,
@@ -8,7 +9,14 @@ import {
   ShieldBan,
   Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
+import { cancelEvent, deleteEvent } from "@/app/actions/event/event.action";
+import { toggleBlock } from "@/app/actions/profile/connections.action";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ShareButton from "@/components/shared/ShareAction";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,31 +25,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  canParticipateInEvent,
+  getEffectiveEventStatus,
+} from "@/lib/helpers/status";
+import type { EventCardData } from "@/types/event.type";
 
-import { deleteEvent } from "@/app/actions/event/event.action";
-import { toggleBlock } from "@/app/actions/profile/connections.action";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import ShareButton from "@/components/shared/ShareAction";
-import { EventCardData } from "@/types/event.type";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
 import EventModal from "./EventModal";
 
 export default function EventMoreActions({ event }: { event: EventCardData }) {
-  const { refresh } = useRouter();
+  const router = useRouter();
+
   const organizerName = event.organizer?.name || "Unknown User";
+  const organizerUsername = event.organizer?.username;
 
-  const isExpired = new Date(event.endsAt) <= new Date();
+  // Effective event status
+  const effectiveStatus = getEffectiveEventStatus(event);
+  const isActive = canParticipateInEvent(effectiveStatus);
 
-  const canEditOrDelete =
-    event.isOwner &&
-    !isExpired &&
-    ["upcoming", "ongoing"].includes(event.status);
+  // Permissions
+  const canEdit = event.isOwner && isActive;
+  const canManageUpcoming = event.isOwner && effectiveStatus === "upcoming";
 
   const canSaveOrReport = !!event.currentUserId && !event.isOwner;
+  const canBlockOrganizer = canSaveOrReport && !!organizerUsername;
 
+  // Dialog states
   const [openEdit, setOpenEdit] = useState(false);
+
+  const [openCancel, setOpenCancel] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const [openDelete, setOpenDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -49,6 +62,30 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
   const [openBlockUser, setOpenBlockUser] = useState(false);
   const [isBlockingUser, setIsBlockingUser] = useState(false);
 
+  // Cancel Event
+  const handleCancel = async () => {
+    setIsCancelling(true);
+
+    try {
+      const result = await cancelEvent(event.id);
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      setOpenCancel(false);
+      router.refresh();
+    } catch (error) {
+      console.error("Cancel Event Error:", error);
+      toast.error("Failed to cancel event.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // Delete Event
   const handleDelete = async () => {
     setIsDeleting(true);
 
@@ -62,7 +99,7 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
 
       toast.success(result.message);
       setOpenDelete(false);
-      refresh();
+      router.refresh();
     } catch (error) {
       console.error("Delete Event Error:", error);
       toast.error("Failed to delete event.");
@@ -71,11 +108,14 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
     }
   };
 
+  // Block Organizer
   const handleBlockUser = async () => {
+    if (!organizerUsername) return;
+
     setIsBlockingUser(true);
 
     try {
-      const result = await toggleBlock(event.organizer.username);
+      const result = await toggleBlock(organizerUsername);
 
       if (!result.success) {
         toast.error(result.message);
@@ -84,7 +124,7 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
 
       toast.success(result.message);
       setOpenBlockUser(false);
-      refresh();
+      router.refresh();
     } catch (error) {
       console.error("Block User Error:", error);
       toast.error("Failed to block user.");
@@ -96,11 +136,11 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild className="bg-app-card">
+        <DropdownMenuTrigger asChild>
           <Button
             variant="secondary"
             size="icon"
-            className="cursor-pointer pointer-events-auto size-8 border border-border/60 bg-app-background/85 shadow-sm backdrop-blur-md hover:bg-app-background"
+            className="pointer-events-auto size-8 cursor-pointer border border-border/60 bg-app-background/85 shadow-sm backdrop-blur-md hover:bg-app-background"
           >
             <MoreHorizontal className="size-4" />
             <span className="sr-only">More actions</span>
@@ -108,18 +148,18 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-44 bg-app-background">
-          {canEditOrDelete && (
-            <>
-              <DropdownMenuItem
-                className="cursor-pointer gap-2"
-                onClick={() => setOpenEdit(true)}
-              >
-                <Pencil className="size-4" />
-                Edit event
-              </DropdownMenuItem>
-            </>
+          {/* Edit Event */}
+          {canEdit && (
+            <DropdownMenuItem
+              className="cursor-pointer gap-2"
+              onClick={() => setOpenEdit(true)}
+            >
+              <Pencil className="size-4" />
+              Edit event
+            </DropdownMenuItem>
           )}
 
+          {/* Share Event */}
           <DropdownMenuItem asChild>
             <ShareButton
               title={`Event: ${event.title}`}
@@ -129,9 +169,19 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
             />
           </DropdownMenuItem>
 
-          {canEditOrDelete && (
+          {/* Upcoming Event Actions */}
+          {canManageUpcoming && (
             <>
               <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                onClick={() => setOpenCancel(true)}
+              >
+                <Ban className="size-4" />
+                Cancel event
+              </DropdownMenuItem>
+
               <DropdownMenuItem
                 className="cursor-pointer gap-2 text-destructive focus:text-destructive"
                 onClick={() => setOpenDelete(true)}
@@ -141,28 +191,33 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
               </DropdownMenuItem>
             </>
           )}
-          {/* TODO: Implement save/unsave event functionality. */}
-          {/* TODO: Implement event reporting functionality. */}
+
+          {/* Save / Report / Block */}
           {canSaveOrReport && (
             <>
               <DropdownMenuSeparator />
+
+              {/* TODO: Implement save/unsave event functionality. */}
               <DropdownMenuItem className="cursor-pointer gap-2">
                 <Bookmark className="size-4" />
                 Save event
               </DropdownMenuItem>
 
+              {/* TODO: Implement event reporting functionality. */}
               <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:text-destructive">
                 <Flag className="size-4" />
                 Report event
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                className="cursor-pointer gap-2 text-destructive focus:text-destructive"
-                onClick={() => setOpenBlockUser(true)}
-              >
-                <ShieldBan className="size-4" />
-                Block organizer
-              </DropdownMenuItem>
+              {canBlockOrganizer && (
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                  onClick={() => setOpenBlockUser(true)}
+                >
+                  <ShieldBan className="size-4" />
+                  Block organizer
+                </DropdownMenuItem>
+              )}
             </>
           )}
         </DropdownMenuContent>
@@ -174,6 +229,17 @@ export default function EventMoreActions({ event }: { event: EventCardData }) {
         event={event}
         open={openEdit}
         onOpenChange={setOpenEdit}
+      />
+
+      {/* Cancel Confirmation */}
+      <ConfirmDialog
+        open={openCancel}
+        onOpenChange={setOpenCancel}
+        title="Cancel Event?"
+        description="Are you sure you want to cancel this event? Participants will be notified that this event is cancelled."
+        confirmText="Cancel Event"
+        loading={isCancelling}
+        onConfirm={handleCancel}
       />
 
       {/* Delete Confirmation */}

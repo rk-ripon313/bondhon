@@ -262,6 +262,94 @@ export async function updateEvent(eventId: string, data: EventFormInput) {
 }
 
 /**
+ * Cancels an upcoming event and notifies its participants.
+ *
+ * @param {string} eventId - The ID of the event to cancel.
+ * @returns {Promise<{ success: boolean; message: string }>}
+ */
+export async function cancelEvent(eventId: string) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user?.id) {
+      return {
+        success: false,
+        message: "User not authenticated.",
+      };
+    }
+
+    await dbConnect();
+
+    const now = new Date();
+
+    // Verify ownership and ensure the event is still upcoming.
+    const cancelledEvent = await Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        organizer: user.id,
+        status: "upcoming",
+        startsAt: { $gt: now },
+        endsAt: { $gt: now },
+      },
+      {
+        $set: { status: "cancelled" },
+      },
+      {
+        new: true,
+      },
+    )
+      .select("title interestedUsers goingUsers")
+      .lean();
+
+    if (!cancelledEvent) {
+      return {
+        success: false,
+        message:
+          "Event not found or it is no longer available for cancellation.",
+      };
+    }
+
+    // Notify interested and going participants.
+    const receivers = [
+      ...new Set([
+        ...cancelledEvent.interestedUsers.map(String),
+        ...cancelledEvent.goingUsers.map(String),
+      ]),
+    ]
+      .filter((id) => id !== user.id)
+      .map((id) => new Types.ObjectId(id));
+
+    if (receivers.length > 0) {
+      await createNotifications({
+        receivers,
+        actor: user.id,
+        type: "event_canceled",
+        title: "Event Cancelled",
+        message: `"${cancelledEvent.title}" has been cancelled by the organizer.`,
+        link: `/events/${eventId}`,
+      });
+    }
+
+    revalidatePath("/");
+    revalidatePath("/profile");
+    revalidatePath("/events");
+    revalidatePath(`/events/${eventId}`);
+
+    return {
+      success: true,
+      message: "Event cancelled successfully.",
+    };
+  } catch (error) {
+    console.error("Cancel Event Error:", error);
+
+    return {
+      success: false,
+      message: "An error occurred while cancelling the event.",
+    };
+  }
+}
+
+/**
  * Deletes an existing event from the database and notifies interested and going users about the deletion.
  * @param {string} eventId - The ID of the event to delete.
  * @returns {Promise<{ success: boolean; message: string }>} - An object indicating the success status and a message.
@@ -284,6 +372,7 @@ export async function deleteEvent(eventId: string) {
       _id: eventId,
       organizer: user.id,
       status: "upcoming",
+      startsAt: { $gt: now },
       endsAt: { $gt: now },
     });
 

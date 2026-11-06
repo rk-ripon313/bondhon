@@ -132,3 +132,28 @@ export const getUrgencyStyles = (urgency: string) => {
       };
   }
 };
+
+interface EventStatusInput {
+  status: string;
+  startsAt: Date | string;
+  endsAt: Date | string;
+}
+
+export function getEffectiveEventStatus(event: EventStatusInput) {
+  if (event.status === "cancelled" || event.status === "completed") {
+    return event.status;
+  }
+
+  const now = Date.now();
+  const startsAt = new Date(event.startsAt).getTime();
+  const endsAt = new Date(event.endsAt).getTime();
+
+  if (endsAt <= now) return "completed";
+  if (startsAt <= now) return "ongoing";
+
+  return "upcoming";
+}
+
+export function canParticipateInEvent(status: string) {
+  return status === "upcoming" || status === "ongoing";
+}
