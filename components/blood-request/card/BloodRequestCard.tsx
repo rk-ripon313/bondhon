@@ -9,7 +9,7 @@ import { formatLocation } from "@/lib/helpers/location-format";
 import { getStatusStyles, getUrgencyStyles } from "@/lib/helpers/status";
 import { BloodRequestCardData } from "@/types/blood-request.type";
 import Link from "next/link";
-import BloodRequestActions from "./BloodRequestActions";
+import BloodRequestMoreActions from "../BloodRequestMoreActions";
 import BloodRequestCardFooter from "./BloodRequestCardFooter";
 
 export default function BloodRequestCard({
@@ -79,7 +79,7 @@ export default function BloodRequestCard({
           </div>
 
           {/* Actions dropdown */}
-          <BloodRequestActions request={request} />
+          <BloodRequestMoreActions request={request} />
         </div>
       </div>
 
@@ -108,7 +108,6 @@ export default function BloodRequestCard({
             {/* Divider */}
             <div className="h-10 w-px shrink-0 bg-border/70" />
 
-            {/* Urgency */}
             {/* Urgency */}
             <div className="shrink-0 text-right">
               <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
