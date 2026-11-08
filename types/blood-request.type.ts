@@ -3,13 +3,16 @@ import { LocationData } from "./location.type";
 
 export interface GetBloodRequestsParams {
   search?: string;
+  division?: string;
+  district?: string;
+  upazila?: string;
   bloodGroup?: string;
   status?: string;
   urgency?: string;
   sort?: string;
-  lat?: string | number;
-  lng?: string | number;
-  page?: string | number;
+  lat?: string;
+  lng?: string;
+  page?: number;
   itemsPerPage?: number;
 }
 

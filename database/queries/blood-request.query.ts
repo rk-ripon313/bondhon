@@ -26,6 +26,9 @@ import { Types } from "mongoose";
 
 export async function getBloodRequests({
   search,
+  division,
+  district,
+  upazila,
   bloodGroup,
   status = "active",
   urgency,
@@ -36,13 +39,16 @@ export async function getBloodRequests({
   itemsPerPage = 9,
 }: GetBloodRequestsParams = {}) {
   const currentUser = await getCurrentUser();
-  const currentUserId = currentUser?.id;
+  const currentUserId = currentUser?.id ?? null;
 
   const filter: Record<string, unknown> = {};
 
-  // Search
+  // Search Filter
   if (search?.trim()) {
-    const searchRegex = new RegExp(search.trim(), "i");
+    const searchRegex = new RegExp(
+      search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+      "i",
+    );
 
     filter.$or = [
       { hospitalName: searchRegex },
@@ -52,12 +58,24 @@ export async function getBloodRequests({
     ];
   }
 
-  // Blood Group
+  // Location Filters (Division, District, Upazila)
+  if (!district && division && division !== "all") {
+    filter["location.district"] = division;
+  }
+
+  if (district && district !== "all") {
+    filter["location.district"] = district;
+  }
+
+  if (upazila && upazila !== "all") {
+    filter["location.area"] = upazila;
+  }
+
+  // Blood Group Filter
   if (bloodGroup && bloodGroup !== "all") {
-    // Explicit filter: show only the selected blood group
     filter.bloodGroupNeeded = bloodGroup;
   } else if (currentUser?.bloodGroup) {
-    // Default recommendation: show compatible blood requests
+    // Default recommendation: show compatible blood requests if no explicit blood group is selected
     filter.bloodGroupNeeded = {
       $in: BLOOD_GROUPS.filter((group) =>
         isBloodGroupCompatible(currentUser.bloodGroup, group),
@@ -65,29 +83,44 @@ export async function getBloodRequests({
     };
   }
 
-  // Status
+  // Status Filter
   if (status && status !== "all") {
     filter.status = status;
   }
 
-  // Urgency
+  // Urgency Filter
   if (urgency && urgency !== "all") {
     filter.urgency = urgency;
   }
 
-  // --------------------------------------------------
-  // Resolve location
-  // URL location has priority.
-  // If unavailable, use current user's saved location.
-  // --------------------------------------------------
+  // Exclude events from blocked users
+  const blockedIds = (currentUser?.blockedUsers ?? []).map(
+    (id) => new Types.ObjectId(id.toString()),
+  );
 
+  if (blockedIds.length) {
+    filter.requester = { $nin: blockedIds };
+  }
+
+  // --------------------------------------------------
+  // Resolve Geolocation coordinates (URL vs User profile)
+  // --------------------------------------------------
   let latitude: number | undefined;
   let longitude: number | undefined;
 
   const parsedLat = Number(lat);
   const parsedLng = Number(lng);
 
-  if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
+  if (
+    lat !== undefined &&
+    lng !== undefined &&
+    lat !== "" &&
+    lng !== "" &&
+    Number.isFinite(parsedLat) &&
+    Number.isFinite(parsedLng) &&
+    Math.abs(parsedLat) <= 90 &&
+    Math.abs(parsedLng) <= 180
+  ) {
     latitude = parsedLat;
     longitude = parsedLng;
   } else {
@@ -105,25 +138,24 @@ export async function getBloodRequests({
 
   const hasLocation = latitude !== undefined && longitude !== undefined;
 
-  const currentPage = Number(page) || 1;
-  const skip = (currentPage - 1) * itemsPerPage;
+  // Pagination & Sorting calculations
+  const currentPage = Math.max(1, Number(page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(itemsPerPage) || 9));
+  const skip = (currentPage - 1) * limit;
   const sortOrder = sort === "oldest" ? 1 : -1;
 
   const totalCount = await BloodRequest.countDocuments(filter);
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const totalPages = Math.ceil(totalCount / limit);
 
   let bloodRequests;
 
   if (hasLocation) {
-    const currentLatitude = latitude as number;
-    const currentLongitude = longitude as number;
-
     bloodRequests = await BloodRequest.aggregate([
       {
         $geoNear: {
           near: {
             type: "Point",
-            coordinates: [currentLongitude, currentLatitude],
+            coordinates: [longitude!, latitude!],
           },
           distanceField: "distance",
           spherical: true,
@@ -131,22 +163,18 @@ export async function getBloodRequests({
           query: filter,
         },
       },
-
       {
         $sort: {
           distance: 1,
           createdAt: sortOrder,
         },
       },
-
       {
         $skip: skip,
       },
-
       {
-        $limit: itemsPerPage,
+        $limit: limit,
       },
-
       {
         $lookup: {
           from: "users",
@@ -155,14 +183,12 @@ export async function getBloodRequests({
           as: "requester",
         },
       },
-
       {
         $unwind: {
           path: "$requester",
           preserveNullAndEmptyArrays: true,
         },
       },
-
       {
         $project: {
           distance: 1,
@@ -177,7 +203,6 @@ export async function getBloodRequests({
           status: 1,
           interestedDonors: 1,
           assignedDonors: 1,
-
           requester: {
             _id: 1,
             name: 1,
@@ -186,7 +211,6 @@ export async function getBloodRequests({
             phone: 1,
             email: 1,
           },
-
           createdAt: 1,
           updatedAt: 1,
         },
@@ -200,14 +224,14 @@ export async function getBloodRequests({
       })
       .sort({ createdAt: sortOrder })
       .skip(skip)
-      .limit(itemsPerPage)
+      .limit(limit)
       .lean();
   }
 
+  // Transform and map formatted requests
   const requests = bloodRequests.map((request) => {
     const interestedDonors = (request.interestedDonors ??
       []) as Types.ObjectId[];
-
     const assignedDonors = (request.assignedDonors ?? []) as {
       donor: Types.ObjectId;
     }[];
@@ -226,27 +250,20 @@ export async function getBloodRequests({
 
     return {
       ...requestData,
-
       requester: requester ? replaceMongoIdInObject(requester) : null,
-
       interestedCount: interestedDonors.length,
-
       assignedCount: assignedDonors.length,
-
       isInterested: currentUserId
         ? interestedDonors.some(
             (donorId) => donorId.toString() === currentUserId,
           )
         : false,
-
       isAssigned: currentUserId
         ? assignedDonors.some((item) => item.donor.toString() === currentUserId)
         : false,
-
       isOwner: currentUserId
         ? requester?._id.toString() === currentUserId
         : false,
-
       isFollowing:
         !!currentUserId &&
         !!requester &&
@@ -254,7 +271,6 @@ export async function getBloodRequests({
         (currentUser?.following ?? []).some(
           (userId) => userId.toString() === requester._id.toString(),
         ),
-
       currentUserId,
     };
   });

@@ -1,10 +1,13 @@
 "use client";
 
-import { LoaderCircle, MapPin, Search, X } from "lucide-react";
+import { LoaderCircle, MapPin, RotateCcw, Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { BLOOD_GROUPS, REQUEST_STATUSES, REQUEST_URGENCY } from "@/constants";
+import { useDonorLocations } from "@/hooks/use-donor-locations";
+import { debounce } from "@/lib/helpers/debounce";
+import { formatLabel } from "@/lib/helpers/formet-text";
 import { findMe } from "@/lib/location/find-me";
 
 import { Button } from "@/components/ui/button";
@@ -16,97 +19,97 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { debounce } from "@/lib/helpers/debounce";
 
-const SORT_OPTIONS = ["newest", "oldest"] as const;
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+] as const;
 
 const CONTROL_CLASS =
-  "h-8 min-h-8 w-full !rounded-lg border border-border bg-app-background px-3 py-0 text-sm leading-none";
+  "h-9 w-full min-w-0 rounded-lg border border-border bg-app-card text-xs text-app-foreground sm:text-sm";
 
 export default function BloodRequestFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const search = searchParams.get("search") ?? "";
+  const division = searchParams.get("division") ?? "";
+  const district = searchParams.get("district") ?? "";
+  const upazila = searchParams.get("upazila") ?? "";
+  const bloodGroup = searchParams.get("bloodGroup") ?? "";
+  const urgency = searchParams.get("urgency") ?? "";
+  const status = searchParams.get("status") ?? "active";
+  const sort = searchParams.get("sort") ?? "newest";
+
+  const hasLocation =
+    Boolean(searchParams.get("lat")) && Boolean(searchParams.get("lng"));
+
+  const [searchInput, setSearchInput] = useState(search);
   const [isFindingLocation, setIsFindingLocation] = useState(false);
 
-  const bloodGroup = searchParams.get("bloodGroup") ?? "all";
-  const status = searchParams.get("status") ?? "active";
-  const urgency = searchParams.get("urgency") ?? "all";
+  const {
+    divisions,
+    districts,
+    upazillas,
+    loadingDivisions,
+    loadingDistricts,
+    loadingUpazillas,
+  } = useDonorLocations(division, district);
 
-  const sortParam = searchParams.get("sort");
-  const sortBy: (typeof SORT_OPTIONS)[number] = SORT_OPTIONS.includes(
-    sortParam as (typeof SORT_OPTIONS)[number],
-  )
-    ? (sortParam as (typeof SORT_OPTIONS)[number])
-    : "newest";
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
 
-  const hasActiveFilters =
-    search.trim() !== "" ||
-    bloodGroup !== "all" ||
-    status !== "active" ||
-    urgency !== "all" ||
-    sortBy !== "newest";
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value) {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      });
 
-  const updateParam = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+      params.delete("page");
 
-    if (key === "status" && value === "all") {
-      params.set("status", "all");
-    } else if (!value || value === "all") {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
+      const query = params.toString();
 
-    params.delete("page");
-
-    router.replace(`${pathname}?${params.toString()}`, {
-      scroll: false,
-    });
-  };
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    },
+    [searchParams, router, pathname],
+  );
 
   const debouncedSearch = debounce((value: string) => {
     const params = new URLSearchParams(searchParams.toString());
 
     if (value.trim()) {
-      params.set("search", value);
+      params.set("search", value.trim());
     } else {
       params.delete("search");
     }
 
     params.delete("page");
 
-    router.replace(`${pathname}?${params.toString()}`, {
+    const query = params.toString();
+
+    router.replace(query ? `${pathname}?${query}` : pathname, {
       scroll: false,
     });
   }, 400);
 
   const handleSearchChange = (value: string) => {
-    setSearch(value);
+    setSearchInput(value);
     debouncedSearch(value);
-  };
-
-  const handleClearFilters = () => {
-    const params = new URLSearchParams(searchParams.toString());
-
-    params.delete("search");
-    params.delete("bloodGroup");
-    params.delete("status");
-    params.delete("urgency");
-    params.delete("sort");
-    params.delete("page");
-
-    setSearch("");
-
-    router.replace(`${pathname}?${params.toString()}`, {
-      scroll: false,
-    });
   };
 
   const handleFindNearby = async () => {
     if (isFindingLocation) return;
+
+    if (hasLocation) {
+      updateParams({ lat: "", lng: "" });
+      return;
+    }
 
     setIsFindingLocation(true);
 
@@ -119,162 +122,305 @@ export default function BloodRequestFilters() {
 
       if (typeof lat !== "number" || typeof lng !== "number") return;
 
-      const params = new URLSearchParams(searchParams.toString());
-
-      params.set("lat", lat.toFixed(5));
-      params.set("lng", lng.toFixed(5));
-      params.delete("page");
-
-      router.replace(`${pathname}?${params.toString()}`, {
-        scroll: false,
+      updateParams({
+        lat: lat.toFixed(5),
+        lng: lng.toFixed(5),
       });
     } catch (error) {
-      console.warn("Failed to find nearby location:", error);
+      console.warn("Failed to find nearby blood requests:", error);
     } finally {
       setIsFindingLocation(false);
     }
   };
 
+  const resetFilters = () => {
+    setSearchInput("");
+
+    updateParams({
+      search: "",
+      division: "",
+      district: "",
+      upazila: "",
+      bloodGroup: "",
+      urgency: "",
+      status: "",
+      sort: "",
+      lat: "",
+      lng: "",
+    });
+  };
+
+  const hasActiveFilters =
+    Boolean(search) ||
+    Boolean(searchInput.trim()) ||
+    Boolean(division) ||
+    Boolean(district) ||
+    Boolean(upazila) ||
+    Boolean(bloodGroup) ||
+    Boolean(urgency) ||
+    status !== "active" ||
+    sort !== "newest" ||
+    hasLocation;
+
   return (
-    <section className="mb-8 rounded-xl border border-border bg-app-card/40 p-3">
-      {/* Top Row */}
-      <div className="grid min-w-0 grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_170px_170px]">
-        {/* Search */}
-        <div className="relative min-w-0">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+    <div className="mb-7 rounded-xl border border-border bg-app-card/40 p-3 sm:p-4">
+      {/* 
+        ========================================================================
+        ROW 1: Search, Near Me, Sort, Reset
+        ========================================================================
+      */}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        {/* Row 1.1: Search */}
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 
           <Input
-            value={search}
+            value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search blood requests..."
-            className={`${CONTROL_CLASS} min-w-0 pl-9 pr-9`}
+            placeholder="Search blood requests, hospital or details..."
+            aria-label="Search blood requests"
+            className={`${CONTROL_CLASS} pl-9 pr-9`}
           />
 
-          {search && (
-            <button
+          {searchInput && (
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               aria-label="Clear search"
               onClick={() => handleSearchChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              className="absolute right-2 top-1/2 size-5 -translate-y-1/2 p-0 text-muted-foreground hover:bg-transparent"
             >
               <X className="size-4" />
-            </button>
+            </Button>
           )}
         </div>
 
-        {/* Find Nearby */}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleFindNearby}
-          disabled={isFindingLocation}
-          className={`${CONTROL_CLASS} cursor-pointer disabled:cursor-not-allowed`}
-        >
-          {isFindingLocation ? (
-            <LoaderCircle className="size-4 animate-spin" />
-          ) : (
-            <MapPin className="size-4" />
-          )}
+        {/* Row 1.2: Near Me, Sort, Reset */}
+        <div className="grid grid-cols-3 gap-2 lg:flex lg:shrink-0">
+          {/* Near Me */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleFindNearby}
+            disabled={isFindingLocation}
+            className={`h-9 cursor-pointer gap-1.5 rounded-lg px-2.5 text-xs font-medium sm:px-3 sm:text-sm ${
+              hasLocation
+                ? "border-emerald-600/30 bg-emerald-600/10 text-emerald-600 dark:text-emerald-400"
+                : "border-emerald-600/20 bg-emerald-600/5 text-emerald-700 hover:bg-emerald-600/10 dark:text-emerald-400"
+            }`}
+          >
+            {isFindingLocation ? (
+              <LoaderCircle className="size-4 animate-spin shrink-0" />
+            ) : (
+              <MapPin className="size-4 shrink-0" />
+            )}
+            <span className="truncate">
+              {isFindingLocation
+                ? "Finding..."
+                : hasLocation
+                  ? "Nearby active"
+                  : "Near Me"}
+            </span>
+          </Button>
 
-          {isFindingLocation ? "Finding location..." : "Use my location"}
-        </Button>
+          {/* Sort */}
+          <Select
+            value={sort}
+            onValueChange={(value) => updateParams({ sort: value })}
+          >
+            <SelectTrigger
+              className={`${CONTROL_CLASS} cursor-pointer px-2.5 sm:px-3`}
+            >
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
 
-        {/* Sort */}
-        <Select
-          value={sortBy}
-          onValueChange={(value) => {
-            if (SORT_OPTIONS.includes(value as (typeof SORT_OPTIONS)[number])) {
-              updateParam("sort", value);
+            <SelectContent className="bg-app-background">
+              {SORT_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Reset */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            className="h-9 cursor-pointer gap-1.5 rounded-lg border-border px-2.5 text-xs font-medium text-muted-foreground hover:bg-app-background hover:text-foreground disabled:pointer-events-none disabled:opacity-40 sm:px-3 sm:text-sm"
+          >
+            <RotateCcw className="size-3.5 shrink-0" />
+            Reset
+          </Button>
+        </div>
+      </div>
+
+      {/* 
+        ========================================================================
+        ROW 2: Filters (Location & Blood Request Specific Filters)
+        ========================================================================
+      */}
+      <div className="mt-2 flex flex-col gap-2 lg:flex-row">
+        {/* Row 2.1 in sm/md (Location Filters: Division, District, Upazila) */}
+        <div className="grid min-w-0 grid-cols-3 gap-2 lg:flex-1">
+          {/* Division */}
+          <Select
+            value={division || "all"}
+            onValueChange={(value) =>
+              updateParams({
+                division: value === "all" ? "" : value,
+                district: "",
+                upazila: "",
+              })
             }
-          }}
-        >
-          <SelectTrigger className={CONTROL_CLASS}>
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
+          >
+            <SelectTrigger className={CONTROL_CLASS}>
+              <SelectValue placeholder="All divisions" />
+            </SelectTrigger>
 
-          <SelectContent>
-            {SORT_OPTIONS.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option === "newest" ? "Newest" : "Oldest"}
+            <SelectContent className="bg-app-background">
+              <SelectItem value="all">
+                {loadingDivisions ? "Loading..." : "All divisions"}
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+              {divisions.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* District */}
+          <Select
+            value={district || "all"}
+            onValueChange={(value) =>
+              updateParams({
+                district: value === "all" ? "" : value,
+                upazila: "",
+              })
+            }
+            disabled={!division || loadingDistricts}
+          >
+            <SelectTrigger className={CONTROL_CLASS}>
+              <SelectValue placeholder="All districts" />
+            </SelectTrigger>
+
+            <SelectContent className="bg-app-background">
+              <SelectItem value="all">
+                {loadingDistricts ? "Loading..." : "All districts"}
+              </SelectItem>
+
+              {districts.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Upazila */}
+          <Select
+            value={upazila || "all"}
+            onValueChange={(value) =>
+              updateParams({
+                upazila: value === "all" ? "" : value,
+              })
+            }
+            disabled={!district || loadingUpazillas}
+          >
+            <SelectTrigger className={CONTROL_CLASS}>
+              <SelectValue placeholder="All upazilas" />
+            </SelectTrigger>
+
+            <SelectContent className="bg-app-background">
+              <SelectItem value="all">
+                {loadingUpazillas ? "Loading..." : "All upazilas"}
+              </SelectItem>
+
+              {upazillas.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Row 2.2 in sm/md (Blood Request Filters: Blood Group, Urgency, Status) */}
+        <div className="grid min-w-0 grid-cols-3 gap-2 lg:flex-1">
+          {/* Blood Group */}
+          <Select
+            value={bloodGroup || "all"}
+            onValueChange={(value) =>
+              updateParams({
+                bloodGroup: value === "all" ? "" : value,
+              })
+            }
+          >
+            <SelectTrigger className={CONTROL_CLASS}>
+              <SelectValue placeholder="All blood groups" />
+            </SelectTrigger>
+
+            <SelectContent className="bg-app-background">
+              <SelectItem value="all">All blood groups</SelectItem>
+
+              {BLOOD_GROUPS.map((group) => (
+                <SelectItem key={group} value={group}>
+                  {group}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Urgency */}
+          <Select
+            value={urgency || "all"}
+            onValueChange={(value) =>
+              updateParams({
+                urgency: value === "all" ? "" : value,
+              })
+            }
+          >
+            <SelectTrigger className={CONTROL_CLASS}>
+              <SelectValue placeholder="All urgencies" />
+            </SelectTrigger>
+
+            <SelectContent className="bg-app-background">
+              <SelectItem value="all">All urgencies</SelectItem>
+
+              {REQUEST_URGENCY.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {formatLabel(item)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Status */}
+          <Select
+            value={status}
+            onValueChange={(value) => updateParams({ status: value })}
+          >
+            <SelectTrigger className={CONTROL_CLASS}>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+
+            <SelectContent className="bg-app-background">
+              <SelectItem value="all">All statuses</SelectItem>
+
+              {REQUEST_STATUSES.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {formatLabel(item)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-
-      {/* Bottom Row */}
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Blood Group */}
-        <Select
-          value={bloodGroup}
-          onValueChange={(value) => updateParam("bloodGroup", value)}
-        >
-          <SelectTrigger className={CONTROL_CLASS}>
-            <SelectValue placeholder="Blood Group" />
-          </SelectTrigger>
-
-          <SelectContent>
-            <SelectItem value="all">All blood groups</SelectItem>
-
-            {BLOOD_GROUPS.map((group) => (
-              <SelectItem key={group} value={group}>
-                {group}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Status */}
-        <Select
-          value={status}
-          onValueChange={(value) => updateParam("status", value)}
-        >
-          <SelectTrigger className={CONTROL_CLASS}>
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-
-            {REQUEST_STATUSES.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item.charAt(0).toUpperCase() + item.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Urgency */}
-        <Select
-          value={urgency}
-          onValueChange={(value) => updateParam("urgency", value)}
-        >
-          <SelectTrigger className={CONTROL_CLASS}>
-            <SelectValue placeholder="Urgency" />
-          </SelectTrigger>
-
-          <SelectContent>
-            <SelectItem value="all">All urgencies</SelectItem>
-
-            {REQUEST_URGENCY.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item.charAt(0).toUpperCase() + item.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Clear Filters */}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleClearFilters}
-          disabled={!hasActiveFilters}
-          className={`${CONTROL_CLASS} cursor-pointer disabled:cursor-not-allowed disabled:opacity-50`}
-        >
-          Clear filters
-        </Button>
-      </div>
-    </section>
+    </div>
   );
 }
