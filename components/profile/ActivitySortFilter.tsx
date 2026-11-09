@@ -77,6 +77,8 @@ export default function ActivitySortFilter({
     });
   };
 
+  const hasActiveFilters = sort !== defaultSort || filter !== defaultFilter;
+
   return (
     <div className="flex items-center gap-2">
       {/* Sort */}
@@ -155,8 +157,9 @@ export default function ActivitySortFilter({
         type="button"
         variant="ghost"
         size="sm"
+        disabled={!hasActiveFilters}
         onClick={handleReset}
-        className="h-8 gap-1.5 rounded-lg px-2 text-xs text-muted-foreground bg-app-card hover:bg-app-muted hover:text-foreground"
+        className="h-8 cursor-pointer gap-1.5 rounded-lg border-border px-2 text-xs font-medium text-muted-foreground hover:bg-app-background hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
       >
         <RotateCcw className="size-3.5" />
         <span className="hidden sm:inline">Reset</span>
