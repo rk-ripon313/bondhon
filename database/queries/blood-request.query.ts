@@ -460,10 +460,11 @@ export async function getBloodRequestsByUser(
     itemsPerPage = 10,
   }: GetBloodRequestsParams = {},
 ) {
+  // Find user by ID or username
   const user = await User.findOne({
     $or: [{ _id: identifier }, { username: identifier }],
   })
-    .select("_id")
+    .select("_id blockedUsers")
     .lean();
 
   if (!user) {
@@ -476,7 +477,26 @@ export async function getBloodRequestsByUser(
 
   const currentUser = await getCurrentUser();
   const currentUserId = currentUser?.id;
+  const targetUserId = user._id.toString();
 
+  // Check mutual block relationship
+  if (currentUserId && currentUserId !== targetUserId) {
+    const isBlocked =
+      currentUser.blockedUsers?.some((id) => id.toString() === targetUserId) ||
+      user.blockedUsers?.some(
+        (id: Types.ObjectId) => id.toString() === currentUserId,
+      );
+
+    if (isBlocked) {
+      return {
+        requests: [],
+        totalCount: 0,
+        totalPages: 0,
+      };
+    }
+  }
+
+  // Build query filter
   const filter: Record<string, unknown> = {
     requester: user._id,
   };
@@ -485,11 +505,16 @@ export async function getBloodRequestsByUser(
     filter.status = status;
   }
 
+  // Pagination & sorting
+  const currentPage = Math.max(1, Number(page) || 1);
+  const limit = Math.min(
+    50,
+    Math.max(1, Math.floor(Number(itemsPerPage) || 10)),
+  );
+  const skip = (currentPage - 1) * limit;
   const sortOrder = sort === "oldest" ? 1 : -1;
 
-  const currentPage = Math.max(Number(page) || 1, 1);
-  const skip = (currentPage - 1) * itemsPerPage;
-
+  // Fetch requests and total count
   const [totalCount, bloodRequests] = await Promise.all([
     BloodRequest.countDocuments(filter),
 
@@ -500,12 +525,13 @@ export async function getBloodRequestsByUser(
       })
       .sort({ createdAt: sortOrder })
       .skip(skip)
-      .limit(itemsPerPage)
+      .limit(limit)
       .lean(),
   ]);
 
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const totalPages = Math.ceil(totalCount / limit);
 
+  // Transform request data
   const requests = bloodRequests.map((request) => {
     const interestedDonors = (request.interestedDonors ??
       []) as Types.ObjectId[];
@@ -535,19 +561,17 @@ export async function getBloodRequestsByUser(
       interestedCount: interestedDonors.length,
       assignedCount: assignedDonors.length,
 
-      isInterested: currentUserId
-        ? interestedDonors.some(
-            (donorId) => donorId.toString() === currentUserId,
-          )
-        : false,
+      isInterested:
+        !!currentUserId &&
+        interestedDonors.some(
+          (donorId) => donorId.toString() === currentUserId,
+        ),
 
-      isAssigned: currentUserId
-        ? assignedDonors.some((item) => item.donor.toString() === currentUserId)
-        : false,
+      isAssigned:
+        !!currentUserId &&
+        assignedDonors.some((item) => item.donor.toString() === currentUserId),
 
-      isOwner: currentUserId
-        ? requester?._id.toString() === currentUserId
-        : false,
+      isOwner: !!currentUserId && requester?._id.toString() === currentUserId,
 
       currentUserId,
     };

@@ -1,31 +1,40 @@
 "use client";
 
 import BloodRequestCard from "@/components/blood-request/card/BloodRequestCard";
+import EventCard from "@/components/events/card/EventCard";
 
 import EmptyState from "@/components/shared/EmptyState";
 import Pagination from "@/components/shared/Pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { REQUEST_STATUSES } from "@/constants";
+import { EVENT_STATUS, REQUEST_STATUSES } from "@/constants";
 import { BloodRequestCardData } from "@/types/blood-request.type";
+import { EventCardData } from "@/types/event.type";
 import { Activity, Calendar } from "lucide-react";
+import { useState } from "react";
 import ActivitySortFilter from "./ActivitySortFilter";
 
 interface UserActivityTabsProps {
-  requests?: BloodRequestCardData[];
-  currentPage?: number;
-  totalPages?: number;
+  requests: BloodRequestCardData[];
+  events: EventCardData[];
+  currentPage: number;
+  requestTotalPages: number;
+  eventTotalPages: number;
 }
 
 export default function UserActivityTabs({
   requests = [],
+  events = [],
   currentPage = 1,
-  totalPages = 1,
+  requestTotalPages = 1,
+  eventTotalPages = 1,
 }: UserActivityTabsProps) {
-  const events = [];
+  const [activeTab, setActiveTab] = useState("requests");
+
+  const isRequestsTab = activeTab === "requests";
 
   return (
     <div className="w-full rounded-2xl border border-border/60 bg-app-card shadow-sm">
-      <Tabs defaultValue="requests" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         {/* Sticky Activity Header + Toolbar */}
         <div className="sticky top-16 z-30 border-b border-border/60 bg-app-card/95 px-4 py-4 backdrop-blur-md supports-[backdrop-filter]:bg-app-card/80 sm:px-5">
           <div className="space-y-4">
@@ -57,7 +66,10 @@ export default function UserActivityTabs({
                 </TabsTrigger>
               </TabsList>
 
-              <ActivitySortFilter filterOptions={REQUEST_STATUSES} />
+              <ActivitySortFilter
+                type={isRequestsTab ? "requests" : "events"}
+                filterOptions={isRequestsTab ? REQUEST_STATUSES : EVENT_STATUS}
+              />
             </div>
           </div>
         </div>
@@ -85,13 +97,16 @@ export default function UserActivityTabs({
                   ))}
                 </div>
 
-                <Pagination currentPage={currentPage} totalPages={totalPages} />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={requestTotalPages}
+                />
               </>
             ) : (
               <EmptyState
                 icon={Activity}
-                title="No blood requests yet"
-                description="Create a request when blood is needed."
+                title="No blood requests found"
+                description="No blood requests match your current filters. Try adjusting or resetting your filters."
               />
             )}
           </TabsContent>
@@ -107,14 +122,23 @@ export default function UserActivityTabs({
             </div>
 
             {events.length > 0 ? (
-              <div className="space-y-3">
-                {/* EventCard will be added here */}
-              </div>
+              <>
+                <div className="space-y-3">
+                  {events.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={eventTotalPages}
+                />
+              </>
             ) : (
               <EmptyState
                 icon={Calendar}
-                title="No events hosted yet"
-                description="Create an event to bring people together for a community activity."
+                title="No events found"
+                description="No events match your current filters. Try adjusting or resetting your filters."
               />
             )}
           </TabsContent>

@@ -1,17 +1,24 @@
 import UserActivityTabs from "@/components/profile/UserActivityTabs";
 import { getBloodRequestsByUser } from "@/database/queries/blood-request.query";
+import { getEventsByUser } from "@/database/queries/event.query";
 import { getCurrentUser } from "@/database/queries/user.query";
-import { GetBloodRequestsParams } from "@/types/blood-request.type";
 import { redirect } from "next/navigation";
 import LocationCard from "./components/LocationCard";
 import MedicalProfileCard from "./components/MedicalProfileCard";
 import PersonalInfoCard from "./components/PersonalInfoCard";
 import ProfileHero from "./components/profile-hero/ProfileHero";
 
+interface ProfileSearchParams {
+  page?: string;
+  requestStatus?: string;
+  requestSort?: string;
+  eventStatus?: string;
+  eventSort?: string;
+}
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<GetBloodRequestsParams>;
+  searchParams: Promise<ProfileSearchParams>;
 }) {
   const user = await getCurrentUser();
 
@@ -24,11 +31,24 @@ export default async function ProfilePage({
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
 
-  const { requests, totalPages } = await getBloodRequestsByUser(user.id, {
-    ...params,
+  const requestParams = {
+    status: params.requestStatus || "all",
+    sort: params.requestSort || "newest",
     page: currentPage,
     itemsPerPage: 10,
-  });
+  };
+
+  const eventParams = {
+    status: params.eventStatus || "all",
+    sort: params.eventSort || "newest",
+    page: currentPage,
+    itemsPerPage: 10,
+  };
+
+  const [requestData, eventData] = await Promise.all([
+    getBloodRequestsByUser(user.id, requestParams),
+    getEventsByUser(user.id, eventParams),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5 px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-7">
@@ -46,9 +66,11 @@ export default async function ProfilePage({
 
       {/* User Activity */}
       <UserActivityTabs
-        requests={requests}
+        requests={requestData.requests}
+        events={eventData.events}
         currentPage={currentPage}
-        totalPages={totalPages}
+        requestTotalPages={requestData.totalPages}
+        eventTotalPages={eventData.totalPages}
       />
     </div>
   );

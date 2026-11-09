@@ -8,7 +8,7 @@ export interface GetEventsParams {
   upazila?: string;
   category?: string;
   status?: string;
-  sort?: "soonest" | "latest" | "nearest";
+  sort?: string;
   lat?: string | number;
   lng?: string | number;
   page?: string | number;

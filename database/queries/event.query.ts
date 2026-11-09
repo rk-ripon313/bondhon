@@ -4,6 +4,7 @@ import {
   replaceMongoIdInObject,
 } from "@/lib/helpers/transform-id";
 import { Event } from "@/models/event.model";
+import { User } from "@/models/user.model";
 import {
   EventCardData,
   EventDetailData,
@@ -352,4 +353,149 @@ export async function getEventById(
     isInterested,
     isGoing,
   } as EventDetailData;
+}
+
+/**
+ * Fetches events created by a specific user based on the provided parameters, including status, sorting, and pagination. Returns the filtered events along with total count and total pages.
+ *
+ * @param {string} identifier - The user ID or username of the organizer.
+ * @param {GetEventsParams} params - The parameters for filtering and sorting events.
+ * @returns {Promise<{ events: EventCardData[]; totalCount: number; totalPages: number }>} A promise that resolves to an object containing the filtered events, total count, and total pages.
+ */
+
+export async function getEventsByUser(
+  identifier: string,
+  {
+    status = "all",
+    sort = "latest",
+    page = 1,
+    itemsPerPage = 10,
+  }: GetEventsParams = {},
+) {
+  // Find user by ID or username
+  const user = await User.findOne({
+    $or: [{ _id: identifier }, { username: identifier }],
+  })
+    .select("_id blockedUsers")
+    .lean();
+
+  if (!user) {
+    return {
+      events: [],
+      totalCount: 0,
+      totalPages: 0,
+    };
+  }
+
+  const currentUser = await getCurrentUser();
+  const currentUserId = currentUser?.id;
+  const targetUserId = user._id.toString();
+
+  // Check mutual block relationship
+  if (currentUserId && currentUserId !== targetUserId) {
+    const isBlocked =
+      currentUser.blockedUsers?.some((id) => id.toString() === targetUserId) ||
+      user.blockedUsers?.some(
+        (id: Types.ObjectId) => id.toString() === currentUserId,
+      );
+
+    if (isBlocked) {
+      return {
+        events: [],
+        totalCount: 0,
+        totalPages: 0,
+      };
+    }
+  }
+
+  // Build query filter
+  const filter: Record<string, unknown> = {
+    organizer: user._id,
+  };
+
+  if (status !== "all") {
+    filter.status = status;
+  }
+
+  // Pagination & sorting
+  const currentPage = Math.max(1, Number(page) || 1);
+  const limit = Math.min(
+    50,
+    Math.max(1, Math.floor(Number(itemsPerPage) || 10)),
+  );
+  const skip = (currentPage - 1) * limit;
+  const sortOrder = sort === "oldest" ? 1 : -1;
+
+  // Fetch requests and total count
+  const [totalCount, userEvents] = await Promise.all([
+    Event.countDocuments(filter),
+
+    Event.find(filter)
+      .populate({
+        path: "organizer",
+        select: "name username image phone email",
+      })
+      .sort({ createdAt: sortOrder })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / limit);
+
+  // Transform event data
+  const events = userEvents.map((event) => {
+    const interestedUsers = (event.interestedUsers ?? []) as Types.ObjectId[];
+
+    const goingUsers = (event.goingUsers ?? []) as Types.ObjectId[];
+
+    const organizer = event.organizer as {
+      _id: Types.ObjectId;
+      name: string;
+      username: string;
+      image?: string;
+      phone?: string;
+      email?: string;
+    };
+
+    const eventData = { ...event };
+
+    delete eventData.interestedUsers;
+    delete eventData.goingUsers;
+
+    return {
+      ...eventData,
+
+      organizer: organizer ? replaceMongoIdInObject(organizer) : null,
+
+      interestedCount: interestedUsers.length,
+      goingCount: goingUsers.length,
+
+      isInterested:
+        !!currentUserId &&
+        interestedUsers.some((userId) => userId.toString() === currentUserId),
+
+      isGoing:
+        !!currentUserId &&
+        goingUsers.some((userId) => userId.toString() === currentUserId),
+
+      isOwner: !!currentUserId && organizer?._id.toString() === currentUserId,
+
+      isFollowing:
+        !!currentUserId &&
+        !!organizer &&
+        organizer._id.toString() !== currentUserId &&
+        (currentUser?.following ?? []).some(
+          (userId) => userId.toString() === organizer._id.toString(),
+        ),
+
+      currentUserId,
+    };
+  });
+
+  return {
+    events: replaceMongoIdInArray(events) as EventCardData[],
+    totalCount,
+    totalPages,
+  };
 }

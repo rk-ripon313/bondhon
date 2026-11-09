@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, Filter } from "lucide-react";
+import { ArrowDownUp, Filter, RotateCcw } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type ActivitySortFilterProps = {
+interface ActivitySortFilterProps {
+  type: "requests" | "events";
   filterOptions: readonly string[];
   defaultSort?: string;
   defaultFilter?: string;
-};
+}
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
@@ -24,6 +25,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function ActivitySortFilter({
+  type,
   filterOptions,
   defaultSort = "newest",
   defaultFilter = "all",
@@ -32,23 +34,40 @@ export default function ActivitySortFilter({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const sort = searchParams.get("sort") || defaultSort;
-  const filter = searchParams.get("status") || defaultFilter;
+  const sortKey = type === "requests" ? "requestSort" : "eventSort";
+  const statusKey = type === "requests" ? "requestStatus" : "eventStatus";
+
+  const sort = searchParams.get(sortKey) || defaultSort;
+  const filter = searchParams.get(statusKey) || defaultFilter;
 
   const allFilterOptions = ["all", ...filterOptions];
 
   const formatLabel = (value: string) =>
     value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
-  const updateParams = (key: "sort" | "status", value: string) => {
+  const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    if (key === "status" && value === "all") {
-      params.delete("status");
+    if (value === "all") {
+      params.delete(key);
     } else {
       params.set(key, value);
     }
 
+    params.delete("page");
+
+    const query = params.toString();
+
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  };
+
+  const handleReset = () => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete(statusKey);
+    params.delete(sortKey);
     params.delete("page");
 
     const query = params.toString();
@@ -70,9 +89,7 @@ export default function ActivitySortFilter({
             className="h-8 gap-1.5 rounded-lg border-border bg-app-background px-2.5 text-xs font-medium hover:bg-muted"
           >
             <ArrowDownUp className="size-3.5 text-muted-foreground" />
-
             <span className="hidden sm:inline">{formatLabel(sort)}</span>
-
             <span className="sr-only">Sort</span>
           </Button>
         </DropdownMenuTrigger>
@@ -83,7 +100,7 @@ export default function ActivitySortFilter({
         >
           <DropdownMenuRadioGroup
             value={sort}
-            onValueChange={(value) => updateParams("sort", value)}
+            onValueChange={(value) => updateParams(sortKey, value)}
           >
             {SORT_OPTIONS.map((option) => (
               <DropdownMenuRadioItem
@@ -108,9 +125,7 @@ export default function ActivitySortFilter({
             className="h-8 gap-1.5 rounded-lg border-border bg-app-background px-2.5 text-xs font-medium hover:bg-muted"
           >
             <Filter className="size-3.5 text-muted-foreground" />
-
             <span className="hidden sm:inline">{formatLabel(filter)}</span>
-
             <span className="sr-only">Filter</span>
           </Button>
         </DropdownMenuTrigger>
@@ -121,7 +136,7 @@ export default function ActivitySortFilter({
         >
           <DropdownMenuRadioGroup
             value={filter}
-            onValueChange={(value) => updateParams("status", value)}
+            onValueChange={(value) => updateParams(statusKey, value)}
           >
             {allFilterOptions.map((option) => (
               <DropdownMenuRadioItem
@@ -135,6 +150,17 @@ export default function ActivitySortFilter({
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={handleReset}
+        className="h-8 gap-1.5 rounded-lg px-2 text-xs text-muted-foreground bg-app-card hover:bg-app-muted hover:text-foreground"
+      >
+        <RotateCcw className="size-3.5" />
+        <span className="hidden sm:inline">Reset</span>
+      </Button>
     </div>
   );
 }
