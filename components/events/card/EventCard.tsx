@@ -16,7 +16,15 @@ import { EventCardData } from "@/types/event.type";
 import EventMoreActions from "../EventMoreActions";
 import EventCardParticipation from "./EventCardParticipation";
 
-export default function EventCard({ event }: { event: EventCardData }) {
+export default function EventCard({
+  event,
+  variant = "default",
+}: {
+  event: EventCardData;
+  variant?: "default" | "compact";
+}) {
+  const isCompact = variant === "compact";
+
   const { dateLabel, timeLabel } = formatEventDateRange(
     event.startsAt,
     event.endsAt,
@@ -27,16 +35,31 @@ export default function EventCard({ event }: { event: EventCardData }) {
   const statusStyles = getStatusStyles(getEffectiveEventStatus(event));
 
   return (
-    <Card className="group overflow-hidden gap-0 border-border/70 bg-app-card py-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <Card
+      className={cn(
+        "group overflow-hidden gap-0 border-border/70 bg-app-card py-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+        isCompact && "md:flex md:flex-row",
+      )}
+    >
       {/* Thumbnail */}
-      <div className="relative aspect-[16/9] overflow-hidden bg-app-muted">
+      <div
+        className={cn(
+          "relative aspect-[16/9] overflow-hidden bg-app-muted",
+          isCompact &&
+            "aspect-[16/7] md:aspect-auto md:w-60 lg:w-72 xl:w-80 md:shrink-0",
+        )}
+      >
         <Link href={`/events/${event.id}`} className="absolute inset-0">
           <Image
             src={event.thumbnail || "/events/default-event.jpg"}
             alt={event.title}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            sizes={
+              isCompact
+                ? "(max-width: 768px) 100vw, (max-width: 1024px) 208px, 256px"
+                : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            }
           />
         </Link>
 
@@ -44,23 +67,23 @@ export default function EventCard({ event }: { event: EventCardData }) {
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3">
           <Badge
             variant="outline"
-            className="flex items-center gap-1.5 border bg-app-background/85 px-2.5 py-1 text-xs font-medium backdrop-blur-md shadow-sm"
+            className="flex items-center gap-1.5 border bg-app-background/85 px-2.5 py-1 text-xs font-medium shadow-sm backdrop-blur-md"
             title={`Status: ${statusStyles.label}`}
           >
             <span
-              className={cn("size-1.5 rounded-full shrink-0", statusStyles.dot)}
+              className={cn("size-1.5 shrink-0 rounded-full", statusStyles.dot)}
               aria-hidden="true"
             />
-
             <span className="capitalize">{statusStyles.label}</span>
           </Badge>
 
-          {/* Event MoreActions dropdown */}
           <EventMoreActions event={event} />
         </div>
       </div>
 
-      <CardContent className="space-y-3 p-4">
+      <CardContent
+        className={cn("min-w-0 flex-1 space-y-3 p-4", isCompact && "md:p-3.5")}
+      >
         {/* Title + Description */}
         <div className="space-y-1.5">
           <Link

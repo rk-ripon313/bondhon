@@ -125,7 +125,7 @@ export default function UserActivityTabs({
               <>
                 <div className="space-y-3">
                   {events.map((event) => (
-                    <EventCard key={event.id} event={event} />
+                    <EventCard key={event.id} event={event} variant="compact" />
                   ))}
                 </div>
 
