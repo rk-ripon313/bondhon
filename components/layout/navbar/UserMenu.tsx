@@ -1,9 +1,5 @@
 "use client";
 
-import { LogOut, Pencil, Settings, User } from "lucide-react";
-import { signOut } from "next-auth/react";
-import Link from "next/link";
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -14,6 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Activity, LogOut, Settings, User } from "lucide-react";
+import { signOut } from "next-auth/react";
+import Link from "next/link";
 
 import { SessionUser } from "@/types/user.type";
 
@@ -24,10 +23,11 @@ const menuItems = [
     icon: User,
   },
   {
-    label: "Edit Profile",
-    href: "/profile/edit",
-    icon: Pencil,
+    label: "My Activity",
+    href: "/my-activity",
+    icon: Activity,
   },
+
   {
     label: "Settings",
     href: "/settings",
@@ -42,7 +42,7 @@ export default function UserMenu({ user }: { user: SessionUser }) {
         <button
           type="button"
           aria-label="Open user menu"
-          className="rounded-full outline-none ring-offset-background transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="cursor-pointer rounded-full outline-none ring-offset-background transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Avatar className="size-10 border border-border">
             <AvatarImage
@@ -57,7 +57,10 @@ export default function UserMenu({ user }: { user: SessionUser }) {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2">
+      <DropdownMenuContent
+        align="end"
+        className="w-64 rounded-2xl p-2 bg-app-card shadow-lg"
+      >
         <DropdownMenuLabel className="space-y-1 rounded-xl px-3 py-3">
           <p className="truncate text-sm font-semibold">
             {user?.name ?? "User"}
