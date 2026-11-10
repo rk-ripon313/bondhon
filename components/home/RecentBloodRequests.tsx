@@ -28,6 +28,9 @@ export default async function RecentBloodRequests({
     lng,
   });
 
+  // Don't render an empty section on the homepage
+  if (!requests.length) return null;
+
   return (
     <Section
       title="Recent Blood Requests"

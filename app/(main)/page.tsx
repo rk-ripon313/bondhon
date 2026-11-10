@@ -4,6 +4,7 @@ import HowItWorks from "@/components/home/HowItWorks";
 import ImpactStats from "@/components/home/ImpactStats";
 import RecentBloodRequests from "@/components/home/RecentBloodRequests";
 import RecentBloodRequestsSkeleton from "@/components/home/RecentBloodRequestsSkeleton";
+import RecentEvents from "@/components/home/RecentEvents";
 import TrustSection from "@/components/home/TrustSection";
 import WelcomeSection from "@/components/home/WelcomeSection";
 import WhatYouCanDo from "@/components/home/WhatYouCanDo";
@@ -36,12 +37,18 @@ export default async function Home({
           <Suspense fallback={<RecentBloodRequestsSkeleton />}>
             <RecentBloodRequests lat={lat} lng={lng} />
           </Suspense>
+          <Suspense fallback={null}>
+            <RecentEvents lat={lat} lng={lng} />
+          </Suspense>
         </>
       ) : (
         <>
           <Hero />
           <Suspense fallback={<RecentBloodRequestsSkeleton />}>
             <RecentBloodRequests lat={lat} lng={lng} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <RecentEvents lat={lat} lng={lng} />
           </Suspense>
           <ImpactStats />
           <WhatYouCanDo />
