@@ -52,13 +52,13 @@ export default function Navbar({ user }: NavbarProps) {
       <nav className="h-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
           {/* LEFT */}
-          <div className="flex items-center gap-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:gap-8">
             <NavLogo />
             <DesktopNav navLinks={navLinks} />
           </div>
 
           {/* RIGHT */}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-0 sm:gap-1.5 lg:gap-2">
             <WeatherButton />
             <ThemeToggle />
 

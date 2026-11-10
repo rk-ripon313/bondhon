@@ -20,7 +20,6 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { SessionUser } from "@/types/user.type";
 import { useState } from "react";
 import NavLogo from "./NavLogo";
-import WeatherButton from "./WeatherButton";
 
 interface MobileNavProps {
   navLinks: {
@@ -45,7 +44,10 @@ export default function MobileNav({ navLinks, user }: MobileNavProps) {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="right" className="w-80 px-0 bg-app-background">
+      <SheetContent
+        side="right"
+        className="w-[min(20rem,calc(100vw-1rem))] px-0 bg-app-background"
+      >
         <VisuallyHidden>
           <SheetTitle>Mobile Navigation</SheetTitle>
 
@@ -59,9 +61,6 @@ export default function MobileNav({ navLinks, user }: MobileNavProps) {
         </div>
 
         <div className="flex flex-col gap-2 px-3 py-2">
-          <div className="mb-4">
-            <WeatherButton mobile />
-          </div>
           {/* navlinks */}
           <div className="flex flex-col gap-1">
             {navLinks.map((item) => {
