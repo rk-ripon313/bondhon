@@ -13,6 +13,7 @@ import {
   BloodRequestDetailData,
   BloodRequestDetailDonor,
   GetBloodRequestsParams,
+  GetMyBloodRequestActivityParams,
 } from "@/types/blood-request.type";
 import { LocationData } from "@/types/location.type";
 import { Types } from "mongoose";
@@ -581,5 +582,184 @@ export async function getBloodRequestsByUser(
     requests: replaceMongoIdInArray(requests) as BloodRequestCardData[],
     totalCount,
     totalPages,
+  };
+}
+
+/**
+ * Fetches the activity for the current user's blood requests based on specified filters.
+ *  @param {GetMyBloodRequestActivityParams} params - The parameters for filtering and sorting the user's blood request activity.
+ *  @returns {Promise<{ requests: BloodRequestCardData[]; totalPages: number; counts: { all: number; interested: number; assigned: number } }>} A promise that resolves to an object containing the filtered blood requests, total pages, and counts of different activity types.
+ *
+ */
+
+export async function getMyBloodRequestActivity({
+  role = "all",
+  status = "all",
+  sort = "newest",
+  page = 1,
+  itemsPerPage = 9,
+}: GetMyBloodRequestActivityParams = {}) {
+  const currentUser = await getCurrentUser();
+  const currentUserId = currentUser?.id;
+
+  if (!currentUserId) {
+    return {
+      requests: [],
+      totalPages: 0,
+      counts: {
+        all: 0,
+        interested: 0,
+        assigned: 0,
+      },
+    };
+  }
+
+  const userObjectId = new Types.ObjectId(currentUserId);
+
+  // Base filter
+  const baseFilter: Record<string, unknown> = {};
+
+  // Status filter
+  if (status !== "all") {
+    baseFilter.status = status;
+  }
+
+  // Exclude requests from users blocked by the current user
+  const blockedIds = (currentUser.blockedUsers ?? []).map(
+    (id) => new Types.ObjectId(id.toString()),
+  );
+
+  if (blockedIds.length) {
+    baseFilter.requester = { $nin: blockedIds };
+  }
+
+  // Participation filters
+  const roleFilter =
+    role === "interested"
+      ? { interestedDonors: userObjectId }
+      : role === "assigned"
+        ? { "assignedDonors.donor": userObjectId }
+        : {
+            $or: [
+              { interestedDonors: userObjectId },
+              { "assignedDonors.donor": userObjectId },
+            ],
+          };
+
+  const filter = {
+    ...baseFilter,
+    ...roleFilter,
+  };
+
+  // Pagination and sorting
+  const currentPage = Math.max(1, Number(page) || 1);
+  const limit = Math.min(
+    50,
+    Math.max(1, Math.floor(Number(itemsPerPage) || 9)),
+  );
+
+  const skip = (currentPage - 1) * limit;
+  const sortOrder = sort === "oldest" ? 1 : -1;
+
+  // Fetch requests and activity counts
+  const [bloodRequests, allCount, interestedCount, assignedCount] =
+    await Promise.all([
+      BloodRequest.find(filter)
+        .populate({
+          path: "requester",
+          select: "name username image phone email",
+        })
+        .sort({ createdAt: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      BloodRequest.countDocuments({
+        ...baseFilter,
+        $or: [
+          { interestedDonors: userObjectId },
+          { "assignedDonors.donor": userObjectId },
+        ],
+      }),
+
+      BloodRequest.countDocuments({
+        ...baseFilter,
+        interestedDonors: userObjectId,
+      }),
+
+      BloodRequest.countDocuments({
+        ...baseFilter,
+        "assignedDonors.donor": userObjectId,
+      }),
+    ]);
+
+  const counts = {
+    all: allCount,
+    interested: interestedCount,
+    assigned: assignedCount,
+  };
+
+  const totalPages = Math.ceil(
+    (counts[role as keyof typeof counts] ?? allCount) / limit,
+  );
+
+  // Transform request data for BloodRequestCard
+  const requests = bloodRequests.map((request) => {
+    const interestedDonors = (request.interestedDonors ??
+      []) as Types.ObjectId[];
+
+    const assignedDonors = (request.assignedDonors ?? []) as {
+      donor: Types.ObjectId;
+    }[];
+
+    const requester = request.requester as {
+      _id: Types.ObjectId;
+      name: string;
+      username: string;
+      image?: string;
+    } | null;
+
+    const requestData = { ...request };
+
+    delete requestData.interestedDonors;
+    delete requestData.assignedDonors;
+
+    return {
+      ...requestData,
+
+      requester: requester ? replaceMongoIdInObject(requester) : null,
+
+      interestedCount: interestedDonors.length,
+      assignedCount: assignedDonors.length,
+
+      isInterested: interestedDonors.some(
+        (donorId) => donorId.toString() === currentUserId,
+      ),
+
+      isAssigned: assignedDonors.some(
+        (item) => item.donor.toString() === currentUserId,
+      ),
+
+      isOwner: requester?._id.toString() === currentUserId,
+
+      isFollowing:
+        !!requester &&
+        requester._id.toString() !== currentUserId &&
+        (currentUser.following ?? []).some(
+          (userId) => userId.toString() === requester._id.toString(),
+        ),
+
+      currentUserId,
+    };
+  });
+
+  return {
+    requests: replaceMongoIdInArray(requests) as BloodRequestCardData[],
+    totalPages,
+    counts: {
+      all: allCount,
+      interested: interestedCount,
+      assigned: assignedCount,
+    },
   };
 }

@@ -89,3 +89,11 @@ export interface BloodRequestDetailData extends BloodRequestCardData {
   interestedDonors: BloodRequestDetailDonor[];
   assignedDonors: BloodRequestAssignment[];
 }
+
+export interface GetMyBloodRequestActivityParams {
+  role?: string;
+  status?: string;
+  sort?: string;
+  page?: number;
+  itemsPerPage?: number;
+}

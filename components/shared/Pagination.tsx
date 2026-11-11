@@ -9,11 +9,13 @@ import { cn } from "@/lib/utils";
 interface PaginationProps {
   currentPage?: number;
   totalPages?: number;
+  pageKey?: string;
 }
 
 export default function Pagination({
   currentPage = 1,
   totalPages = 1,
+  pageKey = "page",
 }: PaginationProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -25,12 +27,14 @@ export default function Pagination({
     const params = new URLSearchParams(searchParams.toString());
 
     if (page <= 1) {
-      params.delete("page");
+      params.delete(pageKey);
     } else {
-      params.set("page", String(page));
+      params.set(pageKey, String(page));
     }
 
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`, {
+      scroll: false,
+    });
   };
 
   const getPageNumbers = () => {
