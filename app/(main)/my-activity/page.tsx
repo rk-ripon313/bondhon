@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, Droplet } from "lucide-react";
 import { Suspense } from "react";
+import MyActivitySkeleton from "./components/MyActivitySkeleton";
 import MyBloodActivity from "./components/MyBloodActivity";
 import MyEventActivity from "./components/MyEventActivity";
 
@@ -56,7 +57,7 @@ export default async function MyActivityPage({
 
         {/* Blood Requests */}
         <TabsContent value="blood" className="mt-6">
-          <Suspense fallback={null}>
+          <Suspense fallback={<MyActivitySkeleton type="requests" />}>
             <MyBloodActivity
               requestParams={{
                 role: params.requestRole || "all",
@@ -71,7 +72,7 @@ export default async function MyActivityPage({
 
         {/* Events */}
         <TabsContent value="events" className="mt-6">
-          <Suspense fallback={null}>
+          <Suspense fallback={<MyActivitySkeleton type="events" />}>
             <MyEventActivity
               eventParams={{
                 role: params.eventRole || "all",
