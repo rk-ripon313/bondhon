@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, Droplet } from "lucide-react";
 import { Suspense } from "react";
 import MyBloodActivity from "./components/MyBloodActivity";
+import MyEventActivity from "./components/MyEventActivity";
 
 export interface MyActivitySearchParams {
   requestRole?: string;
@@ -21,14 +22,6 @@ export default async function MyActivityPage({
   searchParams: Promise<MyActivitySearchParams>;
 }) {
   const params = await searchParams;
-
-  const requestParams = {
-    role: params.requestRole || "all",
-    status: params.requestStatus || "all",
-    sort: params.requestSort || "newest",
-    page: Number(params.requestPage) || 1,
-    itemsPerPage: 9,
-  };
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -64,13 +57,31 @@ export default async function MyActivityPage({
         {/* Blood Requests */}
         <TabsContent value="blood" className="mt-6">
           <Suspense fallback={null}>
-            <MyBloodActivity requestParams={requestParams} />
+            <MyBloodActivity
+              requestParams={{
+                role: params.requestRole || "all",
+                status: params.requestStatus || "all",
+                sort: params.requestSort || "newest",
+                page: Number(params.requestPage) || 1,
+                itemsPerPage: 9,
+              }}
+            />
           </Suspense>
         </TabsContent>
 
         {/* Events */}
         <TabsContent value="events" className="mt-6">
-          {/* Activity content will be added later */}
+          <Suspense fallback={null}>
+            <MyEventActivity
+              eventParams={{
+                role: params.eventRole || "all",
+                status: params.eventStatus || "all",
+                sort: params.eventSort || "newest",
+                page: Number(params.eventPage) || 1,
+                itemsPerPage: 9,
+              }}
+            />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

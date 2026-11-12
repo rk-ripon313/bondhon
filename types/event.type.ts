@@ -64,3 +64,12 @@ export interface EventDetailData extends EventCardData {
   interestedUsers: EventDetailParticipant[];
   goingUsers: EventDetailParticipant[];
 }
+
+
+export interface GetMyEventActivityParams {
+  role?: string;
+  status?: string;
+  sort?: string;
+  page?: number;
+  itemsPerPage?: number;
+}

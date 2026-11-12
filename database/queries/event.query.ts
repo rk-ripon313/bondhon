@@ -9,6 +9,7 @@ import {
   EventCardData,
   EventDetailData,
   GetEventsParams,
+  GetMyEventActivityParams,
 } from "@/types/event.type";
 import { Types } from "mongoose";
 import { getCurrentUser } from "./user.query";
@@ -497,5 +498,174 @@ export async function getEventsByUser(
     events: replaceMongoIdInArray(events) as EventCardData[],
     totalCount,
     totalPages,
+  };
+}
+
+/**
+ * Fetches the activity for the current user's event participation based on specified filters.
+ *
+ * @param {GetMyEventActivityParams} params - The parameters for filtering and sorting the user's event activity.
+ * @returns {Promise<{ events: EventCardData[]; totalPages: number; counts: { all: number; going: number; interested: number } }>} A promise that resolves to an object containing the filtered events, total pages, and counts of different participation types.
+ */
+
+export async function getMyEventActivity({
+  role = "all",
+  status = "all",
+  sort = "newest",
+  page = 1,
+  itemsPerPage = 9,
+}: GetMyEventActivityParams = {}) {
+  const currentUser = await getCurrentUser();
+  const currentUserId = currentUser?.id;
+
+  if (!currentUserId) {
+    return {
+      events: [],
+      totalPages: 0,
+      counts: {
+        all: 0,
+        going: 0,
+        interested: 0,
+      },
+    };
+  }
+
+  await dbConnect();
+
+  const userObjectId = new Types.ObjectId(currentUserId);
+
+  // Base filter
+  const baseFilter: Record<string, unknown> = {};
+
+  // Status filter
+  if (status !== "all") {
+    baseFilter.status = status;
+  }
+
+  // Exclude events from users blocked by the current user
+  const blockedIds = (currentUser.blockedUsers ?? []).map(
+    (id) => new Types.ObjectId(id.toString()),
+  );
+
+  if (blockedIds.length) {
+    baseFilter.organizer = { $nin: blockedIds };
+  }
+
+  // Participation filters
+  const roleFilter =
+    role === "going"
+      ? { goingUsers: userObjectId }
+      : role === "interested"
+        ? { interestedUsers: userObjectId }
+        : {
+            $or: [
+              { goingUsers: userObjectId },
+              { interestedUsers: userObjectId },
+            ],
+          };
+
+  const filter = {
+    ...baseFilter,
+    ...roleFilter,
+  };
+
+  // Pagination and sorting
+  const currentPage = Math.max(1, Number(page) || 1);
+  const limit = Math.min(
+    50,
+    Math.max(1, Math.floor(Number(itemsPerPage) || 9)),
+  );
+
+  const skip = (currentPage - 1) * limit;
+  const sortOrder = sort === "oldest" ? 1 : -1;
+
+  // Fetch events and activity counts
+  const [eventsData, allCount, goingCount, interestedCount] = await Promise.all(
+    [
+      Event.find(filter)
+        .populate({
+          path: "organizer",
+          select: "name username image phone email",
+        })
+        .sort({ createdAt: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      Event.countDocuments({
+        ...baseFilter,
+        $or: [{ goingUsers: userObjectId }, { interestedUsers: userObjectId }],
+      }),
+
+      Event.countDocuments({
+        ...baseFilter,
+        goingUsers: userObjectId,
+      }),
+
+      Event.countDocuments({
+        ...baseFilter,
+        interestedUsers: userObjectId,
+      }),
+    ],
+  );
+
+  const counts = {
+    all: allCount,
+    going: goingCount,
+    interested: interestedCount,
+  };
+
+  const totalPages = Math.ceil(
+    (counts[role as keyof typeof counts] ?? allCount) / limit,
+  );
+
+  // Transform event data for EventCard
+  const events = eventsData.map((event) => {
+    const goingUsers = (event.goingUsers ?? []) as Types.ObjectId[];
+    const interestedUsers = (event.interestedUsers ?? []) as Types.ObjectId[];
+
+    const organizer = event.organizer as {
+      _id: Types.ObjectId;
+      name: string;
+      username: string;
+      image?: string;
+    } | null;
+
+    const eventData = { ...event };
+
+    delete eventData.goingUsers;
+    delete eventData.interestedUsers;
+
+    return {
+      ...eventData,
+
+      organizer: organizer ? replaceMongoIdInObject(organizer) : null,
+
+      goingCount: goingUsers.length,
+      interestedCount: interestedUsers.length,
+
+      isGoing: goingUsers.some((userId) => userId.toString() === currentUserId),
+
+      isInterested: interestedUsers.some(
+        (userId) => userId.toString() === currentUserId,
+      ),
+
+      isOwner: organizer?._id.toString() === currentUserId,
+
+      isFollowing:
+        !!organizer &&
+        organizer._id.toString() !== currentUserId &&
+        (currentUser.following ?? []).some(
+          (userId) => userId.toString() === organizer._id.toString(),
+        ),
+
+      currentUserId,
+    };
+  });
+
+  return {
+    events: replaceMongoIdInArray(events) as EventCardData[],
+    totalPages,
+    counts,
   };
 }
