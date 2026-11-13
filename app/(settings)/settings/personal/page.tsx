@@ -8,6 +8,8 @@ export default async function PersonalInformationPage() {
 
   if (!user) redirect("/login");
 
+  const editUser = JSON.parse(JSON.stringify(user));
+
   return (
     <div className="space-y-5">
       <div className="space-y-1">
@@ -19,7 +21,7 @@ export default async function PersonalInformationPage() {
         </p>
       </div>
 
-      <PersonalInformationContent user={user} />
+      <PersonalInformationContent user={editUser} />
     </div>
   );
 }
