@@ -1,6 +1,9 @@
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db/db-connect";
-import { replaceMongoIdInObject } from "@/lib/helpers/transform-id";
+import {
+  replaceMongoIdInArray,
+  replaceMongoIdInObject,
+} from "@/lib/helpers/transform-id";
 import { User } from "@/models/user.model";
 import { UserProfile } from "@/types/user.type";
 import { Types } from "mongoose";
@@ -209,4 +212,51 @@ export async function updateUserDonationHistory(
       runValidators: true,
     },
   ).lean();
+}
+
+/**
+ * Get the currently authenticated user's blocked users.
+ */
+export async function getBlockedUsers() {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.id) return [];
+
+  await dbConnect();
+
+  const user = await User.findById(currentUser.id)
+    .select("blockedUsers")
+    .populate({
+      path: "blockedUsers",
+      select: "name username image",
+    })
+    .lean();
+
+  if (!user) return [];
+
+  const blockedUsers = (user.blockedUsers ?? []) as {
+    _id: Types.ObjectId;
+    name: string;
+    username: string;
+    image?: string;
+  }[];
+
+  return replaceMongoIdInArray(blockedUsers);
+}
+
+/**
+ * Get the currently authenticated user's blocked usersCount.
+ */
+export async function getBlockedUsersCount() {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.id) return 0;
+
+  await dbConnect();
+
+  const user = await User.findById(currentUser.id)
+    .select("blockedUsers")
+    .lean();
+
+  return user?.blockedUsers?.length ?? 0;
 }
