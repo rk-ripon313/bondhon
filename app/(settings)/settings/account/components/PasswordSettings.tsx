@@ -1,12 +1,17 @@
-import { KeyRound, ShieldCheck } from "lucide-react";
+"use client";
 
-interface PasswordSettingsProps {
-  hasPassword: boolean;
-}
+import { Button } from "@/components/ui/button";
+import { KeyRound, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import PasswordDialog from "./PasswordDialog";
 
 export default function PasswordSettings({
   hasPassword,
-}: PasswordSettingsProps) {
+}: {
+  hasPassword: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
   return (
     <section className="rounded-xl border border-border bg-app-card p-4 sm:p-5">
       <div className="flex items-center gap-3">
@@ -38,24 +43,21 @@ export default function PasswordSettings({
       </div>
 
       <div className="mt-4">
-        {hasPassword ? (
-          <button
-            type="button"
-            disabled
-            className="h-9 rounded-lg border border-border px-4 text-sm font-medium opacity-60"
-          >
-            Change Password
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled
-            className="h-9 rounded-lg bg-app-primary px-4 text-sm font-medium text-white opacity-60"
-          >
-            Set Password
-          </button>
-        )}
+        <Button
+          variant="default"
+          onClick={() => setOpen(true)}
+          className="h-9 cursor-pointer gap-2 rounded-lg bg-app-primary px-4 text-sm text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-app-primary/90 hover:shadow-md active:translate-y-0"
+        >
+          <KeyRound className="size-3.5" />
+          {hasPassword ? "Change Password" : "Set Password"}
+        </Button>
       </div>
+
+      <PasswordDialog
+        open={open}
+        onOpenChange={setOpen}
+        hasPassword={hasPassword}
+      />
     </section>
   );
 }

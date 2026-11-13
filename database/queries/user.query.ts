@@ -264,6 +264,7 @@ export async function getBlockedUsersCount() {
 /**
  * Check whether the current user has a password set.
  */
+
 export async function hasUserPassword(): Promise<boolean> {
   await dbConnect();
 
@@ -272,7 +273,7 @@ export async function hasUserPassword(): Promise<boolean> {
   if (!session?.user?.email) return false;
 
   const user = await User.findOne({ email: session.user.email })
-    .select("_id +password")
+    .select("+password")
     .lean();
 
   return Boolean(user?.password);
