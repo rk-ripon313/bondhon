@@ -122,7 +122,9 @@
 
   --color-app-primary: #dc2626;
   --color-app-secondary: #2563eb;
-  --color-app-muted: #64748b;
+
+  --color-app-muted: #f1f5f9;
+  --color-app-muted-foreground: #64748b;
 
   /* FONTS */
   --font-body: var(--font-inter);
@@ -138,7 +140,9 @@
 
   --color-app-primary: #ef4444;
   --color-app-secondary: #3b82f6;
-  --color-app-muted: #94a3b8;
+
+  --color-app-muted: #1e293b;
+  --color-app-muted-foreground: #94a3b8;
 }
 
 @layer base {
